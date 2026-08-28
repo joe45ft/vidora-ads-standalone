@@ -1,15 +1,21 @@
 import { cookies } from "next/headers";
-import { getEnv } from "@/lib/cloudflare";
+import {
+  getStoredSessionSecret,
+  verifyStoredAdminPassword
+} from "@/lib/admin-settings";
 
 const COOKIE = "vidora_ads_admin";
 
 function hex(buffer: ArrayBuffer) {
-  return Array.from(new Uint8Array(buffer)).map((b) => b.toString(16).padStart(2, "0")).join("");
+  return Array.from(new Uint8Array(buffer))
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
 }
 
 async function sign(value: string) {
-  const secret = getEnv().SESSION_SECRET;
-  if (!secret) throw new Error("SESSION_SECRET is not configured");
+  const secret = await getStoredSessionSecret();
+  if (!secret) throw new Error("ADMIN_NOT_CONFIGURED");
+
   const key = await crypto.subtle.importKey(
     "raw",
     new TextEncoder().encode(secret),
@@ -17,6 +23,7 @@ async function sign(value: string) {
     false,
     ["sign"]
   );
+
   return hex(await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(value)));
 }
 
@@ -24,6 +31,7 @@ export async function createAdminSession() {
   const issued = Date.now().toString();
   const signature = await sign(issued);
   const store = await cookies();
+
   store.set(COOKIE, `${issued}.${signature}`, {
     httpOnly: true,
     secure: true,
@@ -42,14 +50,20 @@ export async function isAdminAuthenticated() {
   const store = await cookies();
   const value = store.get(COOKIE)?.value;
   if (!value) return false;
+
   const [issued, signature] = value.split(".");
   if (!issued || !signature) return false;
+
   const age = Date.now() - Number(issued);
   if (!Number.isFinite(age) || age < 0 || age > 12 * 60 * 60 * 1000) return false;
-  return (await sign(issued)) === signature;
+
+  try {
+    return (await sign(issued)) === signature;
+  } catch {
+    return false;
+  }
 }
 
-export function verifyAdminPassword(password: string) {
-  const expected = getEnv().ADMIN_PASSWORD;
-  return Boolean(expected && password === expected);
+export async function verifyAdminPassword(password: string) {
+  return verifyStoredAdminPassword(password);
 }

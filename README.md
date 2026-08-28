@@ -191,3 +191,39 @@ npx opennextjs-cloudflare deploy
 ```
 
 OpenNext calls the project's `build` script internally. Pointing that script back to OpenNext causes an infinite recursive build.
+
+
+## v1.1.1 — Automatic Admin Setup
+
+لم يعد المشروع يحتاج إلى إضافة:
+
+```text
+ADMIN_PASSWORD
+SESSION_SECRET
+```
+
+يدويًا في Cloudflare.
+
+أول مرة تفتح:
+
+```text
+/admin
+```
+
+سيتم تحويلك تلقائيًا إلى:
+
+```text
+/admin/setup
+```
+
+اختر كلمة مرور الإدارة فقط.
+
+النظام يقوم تلقائيًا بـ:
+- إنشاء Salt عشوائي.
+- Hash لكلمة المرور باستخدام PBKDF2-SHA256.
+- إنشاء Session Secret عشوائي.
+- حفظ إعداد الإدارة داخل D1.
+- إنشاء جلسة الدخول مباشرة.
+- إغلاق صفحة الإعداد بعد أول Setup.
+
+مهم: نفّذ الإعداد الأول فور نشر الموقع، لأن أول شخص يصل إلى صفحة Setup في قاعدة جديدة يمكنه إنشاء حساب الإدارة.
