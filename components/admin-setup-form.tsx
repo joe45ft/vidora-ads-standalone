@@ -38,9 +38,23 @@ export function AdminSetupForm() {
 
     const data = await response.json().catch(() => ({}));
     setBusy(false);
-    setError(data?.error === "already_configured"
-      ? "تم إعداد الإدارة بالفعل."
-      : "تعذر إكمال الإعداد.");
+
+    if (data?.error === "already_configured") {
+      setError("تم إعداد الإدارة بالفعل.");
+      return;
+    }
+
+    if (data?.error === "database_unavailable") {
+      setError("تعذر الوصول إلى قاعدة D1. تأكد من ربط DB بالمشروع.");
+      return;
+    }
+
+    if (data?.error === "crypto_failed") {
+      setError("تعذر إنشاء بيانات الحماية على Cloudflare. استخدم النسخة الأحدث.");
+      return;
+    }
+
+    setError("تعذر إكمال الإعداد. راجع Runtime Logs في Cloudflare.");
   }
 
   return (

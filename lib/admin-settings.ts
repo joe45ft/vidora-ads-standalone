@@ -1,6 +1,6 @@
 import { getEnv } from "@/lib/cloudflare";
 
-const ITERATIONS = 210_000;
+const ITERATIONS = 100_000;
 const SETTING_ID = 1;
 
 type AdminSettingsRow = {

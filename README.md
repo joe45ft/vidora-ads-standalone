@@ -227,3 +227,14 @@ SESSION_SECRET
 - إغلاق صفحة الإعداد بعد أول Setup.
 
 مهم: نفّذ الإعداد الأول فور نشر الموقع، لأن أول شخص يصل إلى صفحة Setup في قاعدة جديدة يمكنه إنشاء حساب الإدارة.
+
+
+## v1.1.2 — First Setup Fix
+
+If v1.1.1 showed:
+
+```text
+تعذر إكمال الإعداد
+```
+
+during the first admin setup, v1.1.2 reduces the PBKDF2 workload to a Cloudflare-friendly 100,000 iterations and adds clearer runtime diagnostics.
