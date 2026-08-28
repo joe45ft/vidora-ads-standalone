@@ -15,6 +15,7 @@ export const adInputSchema = z.object({
   headline: optionalText(180),
   description: optionalText(2000),
   imageUrl: optionalText(1200),
+  adType: z.enum(["course", "offer"]).default("course"),
   originalPrice: optionalMoney.optional(),
   offerPrice: money,
   ctaText: z.string().trim().min(1, "نص زر التسجيل مطلوب.").max(60).default("سجل الآن"),
@@ -40,17 +41,25 @@ export const adInputSchema = z.object({
       ctx.addIssue({
         code: "custom",
         path: ["endsAt"],
-        message: "نهاية العرض يجب أن تكون بعد بداية العرض."
+        message: "نهاية النشر يجب أن تكون بعد بداية النشر."
       });
     }
   }
 
-  if (value.originalPrice != null && value.originalPrice < value.offerPrice) {
-    ctx.addIssue({
-      code: "custom",
-      path: ["originalPrice"],
-      message: "السعر الأصلي يجب ألا يكون أقل من سعر العرض."
-    });
+  if (value.adType === "offer") {
+    if (value.originalPrice == null) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["originalPrice"],
+        message: "السعر الأصلي مطلوب لعرض الخصم."
+      });
+    } else if (value.originalPrice <= value.offerPrice) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["originalPrice"],
+        message: "السعر الأصلي يجب أن يكون أكبر من سعر العرض."
+      });
+    }
   }
 });
 

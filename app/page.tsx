@@ -35,8 +35,8 @@ export default async function HomePage() {
 
           <nav className="hidden items-center gap-7 text-sm font-bold text-slate-400 md:flex">
             <a href="#home" className="transition hover:text-white">الرئيسية</a>
-            {featured && <a href="#featured" className="transition hover:text-white">العرض المميز</a>}
-            <a href="#offers" className="transition hover:text-white">كل العروض</a>
+            {featured && <a href="#featured" className="transition hover:text-white">المميز</a>}
+            <a href="#offers" className="transition hover:text-white">الكورسات والعروض</a>
             <a href="#categories" className="transition hover:text-white">التصنيفات</a>
           </nav>
 
@@ -60,7 +60,7 @@ export default async function HomePage() {
           <h1 className="mx-auto mt-7 max-w-4xl text-5xl font-black leading-[1.18] md:text-7xl">
             اكتشف الكورس المناسب لك
             <span className="block bg-gradient-to-l from-violet-400 to-cyan-300 bg-clip-text text-transparent">
-              بأفضل عرض متاح
+              بأفضل اختيار متاح
             </span>
           </h1>
 
@@ -73,7 +73,7 @@ export default async function HomePage() {
               href="#offers"
               className="inline-flex items-center gap-2 rounded-2xl bg-violet-600 px-6 py-3.5 font-black transition hover:bg-violet-500"
             >
-              تصفح العروض
+              تصفح الكورسات والعروض
               <ArrowDown size={17} />
             </a>
             <a
@@ -91,11 +91,11 @@ export default async function HomePage() {
         <section id="featured" className="page-shell py-16 md:py-20">
           <div className="mb-7 flex items-end justify-between gap-4">
             <div>
-              <div className="text-xs font-black tracking-[.2em] text-violet-400">FEATURED OFFER</div>
-              <h2 className="mt-2 text-3xl font-black md:text-4xl">العرض المميز</h2>
+              <div className="text-xs font-black tracking-[.2em] text-violet-400">FEATURED</div>
+              <h2 className="mt-2 text-3xl font-black md:text-4xl">المميز</h2>
             </div>
             <a href="#offers" className="hidden items-center gap-1 text-sm font-bold text-slate-400 hover:text-white sm:inline-flex">
-              كل العروض
+              الكورسات والعروض
               <ChevronLeft size={17} />
             </a>
           </div>
@@ -131,7 +131,7 @@ export default async function HomePage() {
 
       <section id="offers" className="page-shell py-16 md:py-20">
         <div className="mb-8">
-          <div className="text-xs font-black tracking-[.2em] text-violet-400">ALL OFFERS</div>
+          <div className="text-xs font-black tracking-[.2em] text-violet-400">COURSES & OFFERS</div>
           <h2 className="mt-2 text-3xl font-black md:text-4xl">أحدث الكورسات والعروض</h2>
           <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-500">
             استخدم البحث أو التصنيفات للوصول للكورس المناسب بسرعة.

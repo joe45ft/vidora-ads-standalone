@@ -38,12 +38,22 @@ export async function listAllAds() {
     .orderBy(desc(advertisements.createdAt));
 }
 
+function publicAdCondition(id: string, now = new Date()) {
+  return and(
+    eq(advertisements.id, id),
+    eq(advertisements.published, true),
+    eq(advertisements.archived, false),
+    or(isNull(advertisements.startsAt), lt(advertisements.startsAt, now)),
+    or(isNull(advertisements.endsAt), gt(advertisements.endsAt, now))
+  );
+}
+
 export async function incrementView(id: string) {
   await ensureAdvertisementsTable();
   await getDb()
     .update(advertisements)
     .set({ views: sql`${advertisements.views} + 1` })
-    .where(eq(advertisements.id, id));
+    .where(publicAdCondition(id));
 }
 
 export async function incrementClick(id: string) {
@@ -51,5 +61,5 @@ export async function incrementClick(id: string) {
   await getDb()
     .update(advertisements)
     .set({ clicks: sql`${advertisements.clicks} + 1` })
-    .where(eq(advertisements.id, id));
+    .where(publicAdCondition(id));
 }

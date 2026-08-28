@@ -49,7 +49,8 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
         headline: input.headline || null,
         description: input.description || null,
         imageUrl: normalizePublicImageUrl(input.imageUrl),
-        originalPrice: input.originalPrice ?? null,
+        adType: input.adType,
+        originalPrice: input.adType === "offer" ? input.originalPrice ?? null : null,
         offerPrice: input.offerPrice,
         ctaText: input.ctaText,
         ctaUrl: validatePublicActionUrl(input.ctaUrl, {

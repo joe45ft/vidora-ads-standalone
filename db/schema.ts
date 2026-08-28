@@ -9,6 +9,7 @@ export const advertisements = sqliteTable("advertisements", {
   headline: text("headline"),
   description: text("description"),
   imageUrl: text("image_url"),
+  adType: text("ad_type").$type<"course" | "offer">().notNull().default("course"),
   originalPrice: integer("original_price"),
   offerPrice: integer("offer_price").notNull(),
   ctaText: text("cta_text").notNull().default("سجل الآن"),

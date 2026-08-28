@@ -4,12 +4,13 @@ import { useMemo, useState } from "react";
 import {
   AlertCircle,
   Archive,
+  BadgePercent,
   BarChart3,
+  BookOpenCheck,
   CheckCircle2,
   Copy,
   Edit3,
   Eye,
-  Image as ImageIcon,
   Loader2,
   LogOut,
   MousePointerClick,
@@ -21,6 +22,7 @@ import {
   Trash2,
   X
 } from "lucide-react";
+import { CloudImage } from "@/components/cloud-image";
 
 type Ad = {
   id: string;
@@ -31,6 +33,7 @@ type Ad = {
   headline: string | null;
   description: string | null;
   imageUrl: string | null;
+  adType: "course" | "offer";
   originalPrice: number | null;
   offerPrice: number;
   ctaText: string;
@@ -52,6 +55,7 @@ type FormState = {
   headline: string;
   description: string;
   imageUrl: string;
+  adType: "course" | "offer";
   originalPrice: string;
   offerPrice: string;
   ctaText: string;
@@ -74,6 +78,7 @@ type ApiPayload = {
 type Toast = { type: "success" | "error"; text: string } | null;
 
 type StatusKey = "all" | "Active" | "Draft" | "Scheduled" | "Expired" | "Archived";
+type AdTypeFilter = "all" | "course" | "offer";
 
 const emptyForm: FormState = {
   title: "",
@@ -82,6 +87,7 @@ const emptyForm: FormState = {
   headline: "",
   description: "",
   imageUrl: "",
+  adType: "course",
   originalPrice: "",
   offerPrice: "",
   ctaText: "سجل الآن",
@@ -126,16 +132,17 @@ function validateForm(form: FormState) {
   if (form.courseName.trim().length < 2) errors.courseName = "اسم الكورس مطلوب.";
   if (form.category.trim().length < 2) errors.category = "التصنيف مطلوب.";
 
-  const offer = Number(form.offerPrice);
-  if (!form.offerPrice.trim()) errors.offerPrice = "سعر العرض مطلوب.";
-  else if (!Number.isInteger(offer) || offer < 0) errors.offerPrice = "أدخل سعرًا صحيحًا بدون كسور.";
+  const currentPrice = Number(form.offerPrice);
+  if (!form.offerPrice.trim()) errors.offerPrice = form.adType === "offer" ? "سعر العرض مطلوب." : "سعر الكورس مطلوب.";
+  else if (!Number.isInteger(currentPrice) || currentPrice < 0) errors.offerPrice = "أدخل سعرًا صحيحًا بدون كسور.";
 
-  if (form.originalPrice.trim()) {
-    const original = Number(form.originalPrice);
-    if (!Number.isInteger(original) || original < 0) {
-      errors.originalPrice = "أدخل سعرًا صحيحًا بدون كسور.";
-    } else if (Number.isFinite(offer) && original < offer) {
-      errors.originalPrice = "السعر الأصلي يجب ألا يكون أقل من سعر العرض.";
+  if (form.adType === "offer") {
+    if (!form.originalPrice.trim()) {
+      errors.originalPrice = "السعر الأصلي مطلوب لعرض الخصم.";
+    } else {
+      const original = Number(form.originalPrice);
+      if (!Number.isInteger(original) || original < 0) errors.originalPrice = "أدخل سعرًا صحيحًا بدون كسور.";
+      else if (Number.isFinite(currentPrice) && original <= currentPrice) errors.originalPrice = "السعر الأصلي يجب أن يكون أكبر من سعر العرض.";
     }
   }
 
@@ -165,6 +172,7 @@ export function AdminDashboard({ initialAds }: { initialAds: Ad[] }) {
   const [ads, setAds] = useState(initialAds);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<StatusKey>("all");
+  const [typeFilter, setTypeFilter] = useState<AdTypeFilter>("all");
   const [editing, setEditing] = useState<FormState | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
@@ -176,9 +184,10 @@ export function AdminDashboard({ initialAds }: { initialAds: Ad[] }) {
     return ads.filter((ad) => {
       const textMatch = `${ad.title} ${ad.courseName} ${ad.category}`.toLowerCase().includes(q);
       const statusMatch = filter === "all" || status(ad) === filter;
-      return textMatch && statusMatch;
+      const typeMatch = typeFilter === "all" || ad.adType === typeFilter;
+      return textMatch && statusMatch && typeMatch;
     });
-  }, [ads, query, filter]);
+  }, [ads, query, filter, typeFilter]);
 
   const metrics = useMemo(() => ({
     active: ads.filter((ad) => status(ad) === "Active").length,
@@ -206,6 +215,7 @@ export function AdminDashboard({ initialAds }: { initialAds: Ad[] }) {
       headline: ad.headline ?? "",
       description: ad.description ?? "",
       imageUrl: ad.imageUrl ?? "",
+      adType: ad.adType ?? (ad.originalPrice != null && ad.originalPrice > ad.offerPrice ? "offer" : "course"),
       originalPrice: ad.originalPrice?.toString() ?? "",
       offerPrice: ad.offerPrice.toString(),
       ctaText: ad.ctaText,
@@ -261,7 +271,8 @@ export function AdminDashboard({ initialAds }: { initialAds: Ad[] }) {
       headline: editing.headline.trim() || null,
       description: editing.description.trim() || null,
       imageUrl: editing.imageUrl.trim() || null,
-      originalPrice: editing.originalPrice.trim() ? Number(editing.originalPrice) : null,
+      adType: editing.adType,
+      originalPrice: editing.adType === "offer" && editing.originalPrice.trim() ? Number(editing.originalPrice) : null,
       offerPrice: Number(editing.offerPrice),
       ctaText: editing.ctaText.trim(),
       ctaUrl: editing.ctaUrl.trim(),
@@ -400,6 +411,12 @@ export function AdminDashboard({ initialAds }: { initialAds: Ad[] }) {
                 <option value="Archived">مؤرشف</option>
               </select>
 
+              <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value as AdTypeFilter)} className="rounded-xl border border-white/10 bg-[#0a101c] px-3 py-2.5 text-sm outline-none">
+                <option value="all">كل الأنواع</option>
+                <option value="course">كورسات متاحة</option>
+                <option value="offer">عروض خصم</option>
+              </select>
+
               <label className="flex min-w-[260px] items-center gap-2 rounded-xl border border-white/10 bg-black/20 px-3 py-2">
                 <Search size={17} className="text-slate-500" />
                 <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="ابحث عن إعلان أو كورس..." className="w-full bg-transparent outline-none" />
@@ -412,11 +429,12 @@ export function AdminDashboard({ initialAds }: { initialAds: Ad[] }) {
               {filtered.map((ad) => (
                 <article key={ad.id} className="grid gap-4 rounded-2xl border border-white/10 bg-black/10 p-4 md:grid-cols-[100px_1fr_auto] md:items-center">
                   <div className="aspect-[4/3] overflow-hidden rounded-xl bg-slate-900">
-                    {ad.imageUrl ? (
-                      <img src={ad.imageUrl} alt={ad.courseName} loading="lazy" className="h-full w-full object-cover" />
-                    ) : (
-                      <div className="grid h-full place-items-center text-white/20"><ImageIcon /></div>
-                    )}
+                    <CloudImage
+                      src={ad.imageUrl}
+                      alt={ad.courseName}
+                      className="h-full w-full object-cover"
+                      fallbackClassName="grid h-full place-items-center bg-slate-900 text-white/20"
+                    />
                   </div>
 
                   <div>
@@ -424,6 +442,10 @@ export function AdminDashboard({ initialAds }: { initialAds: Ad[] }) {
                       <h3 className="font-bold">{ad.courseName}</h3>
                       {ad.featured && <Star size={15} className="text-amber-300" fill="currentColor" />}
                       <span className="rounded-full border border-white/10 px-2 py-0.5 text-[11px] text-slate-400">{statusLabel(status(ad))}</span>
+                      <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold ${ad.adType === "offer" ? "bg-emerald-500/10 text-emerald-300" : "bg-cyan-500/10 text-cyan-300"}`}>
+                        {ad.adType === "offer" ? <BadgePercent size={12} /> : <BookOpenCheck size={12} />}
+                        {ad.adType === "offer" ? "عرض خصم" : "كورس متاح"}
+                      </span>
                     </div>
                     <div className="mt-1 text-sm text-slate-500">{ad.title} • {ad.category}</div>
                     <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-slate-600">
@@ -470,16 +492,31 @@ export function AdminDashboard({ initialAds }: { initialAds: Ad[] }) {
               <Field required label="اسم الكورس" error={fieldErrors.courseName}>
                 <input value={editing.courseName} onChange={(e) => setEditing({ ...editing, courseName: e.target.value })} placeholder="اسم الكورس" />
               </Field>
+              <Field required label="نوع الإعلان" error={fieldErrors.adType} hint="اختر كورس متاح بدون خصم أو عرض بسعر مخفض.">
+                <select
+                  value={editing.adType}
+                  onChange={(e) => {
+                    const adType = e.target.value as "course" | "offer";
+                    setEditing({ ...editing, adType, originalPrice: adType === "course" ? "" : editing.originalPrice });
+                  }}
+                  className="w-full rounded-xl border border-white/10 bg-black/20 px-3 py-2.5 outline-none focus:border-violet-400/50"
+                >
+                  <option value="course" className="bg-[#0d1322]">كورس متاح — بدون خصم</option>
+                  <option value="offer" className="bg-[#0d1322]">عرض بخصم</option>
+                </select>
+              </Field>
               <Field required label="التصنيف" error={fieldErrors.category}>
                 <input value={editing.category} onChange={(e) => setEditing({ ...editing, category: e.target.value })} placeholder="Cyber Security, English..." />
               </Field>
               <Field label="العنوان التسويقي" error={fieldErrors.headline}>
                 <input value={editing.headline} onChange={(e) => setEditing({ ...editing, headline: e.target.value })} placeholder="وصف قصير وجذاب" />
               </Field>
-              <Field label="السعر الأصلي (EGP)" error={fieldErrors.originalPrice}>
-                <input type="number" min="0" step="1" value={editing.originalPrice} onChange={(e) => setEditing({ ...editing, originalPrice: e.target.value })} placeholder="اختياري" />
-              </Field>
-              <Field required label="سعر العرض (EGP)" error={fieldErrors.offerPrice}>
+              {editing.adType === "offer" && (
+                <Field required label="السعر الأصلي (EGP)" error={fieldErrors.originalPrice} hint="السعر قبل الخصم.">
+                  <input type="number" min="0" step="1" value={editing.originalPrice} onChange={(e) => setEditing({ ...editing, originalPrice: e.target.value })} placeholder="مثال: 1500" />
+                </Field>
+              )}
+              <Field required label={editing.adType === "offer" ? "سعر العرض (EGP)" : "سعر الكورس (EGP)"} error={fieldErrors.offerPrice}>
                 <input type="number" min="0" step="1" value={editing.offerPrice} onChange={(e) => setEditing({ ...editing, offerPrice: e.target.value })} placeholder="0 للكورس المجاني" />
               </Field>
               <Field required label="نص زر التسجيل" error={fieldErrors.ctaText}>
@@ -488,21 +525,29 @@ export function AdminDashboard({ initialAds }: { initialAds: Ad[] }) {
               <Field required={editing.published && !editing.archived} label="رابط التسجيل / CTA" error={fieldErrors.ctaUrl} hint="يمكن كتابة الرابط بدون https وسيتم إضافته تلقائيًا.">
                 <input inputMode="url" value={editing.ctaUrl} onChange={(e) => setEditing({ ...editing, ctaUrl: e.target.value })} placeholder="https://example.com/register" />
               </Field>
-              <Field label="بداية العرض" error={fieldErrors.startsAt}>
+              <Field label="بداية النشر" error={fieldErrors.startsAt}>
                 <input type="datetime-local" value={editing.startsAt} onChange={(e) => setEditing({ ...editing, startsAt: e.target.value })} />
               </Field>
-              <Field label="نهاية العرض" error={fieldErrors.endsAt}>
+              <Field label="نهاية النشر" error={fieldErrors.endsAt}>
                 <input type="datetime-local" value={editing.endsAt} onChange={(e) => setEditing({ ...editing, endsAt: e.target.value })} />
               </Field>
 
               <div className="md:col-span-2">
-                <Field label="رابط صورة الإعلان" error={fieldErrors.imageUrl} hint="Google Drive وDropbox وروابط HTTPS العامة مدعومة.">
+                <Field label="رابط صورة الإعلان" error={fieldErrors.imageUrl} hint="Google Drive وDropbox وCloudinary وR2 وS3 وأي رابط HTTPS عام. تأكد أن الملف Public.">
                   <input inputMode="url" value={editing.imageUrl} onChange={(e) => setEditing({ ...editing, imageUrl: e.target.value })} placeholder="https://..." />
                 </Field>
 
-                {editing.imageUrl.trim() && /^https:\/\//i.test(editing.imageUrl.trim()) && (
+                {editing.imageUrl.trim() && (
                   <div className="mt-3 overflow-hidden rounded-2xl border border-white/10 bg-black/20">
-                    <img src={editing.imageUrl.trim()} alt="معاينة الإعلان" className="max-h-64 w-full object-contain" />
+                    <div className="border-b border-white/10 px-3 py-2 text-xs font-bold text-slate-500">معاينة الصورة عبر Image Proxy</div>
+                    <div className="min-h-48">
+                      <CloudImage
+                        src={editing.imageUrl}
+                        alt="معاينة الإعلان"
+                        className="max-h-72 w-full object-contain"
+                        fallbackClassName="grid min-h-48 place-items-center text-rose-300"
+                      />
+                    </div>
                   </div>
                 )}
               </div>
@@ -522,7 +567,7 @@ export function AdminDashboard({ initialAds }: { initialAds: Ad[] }) {
                 onChange={(checked) => setEditing({ ...editing, published: checked })}
               />
               <Toggle
-                label="عرض مميز"
+                label="مميز"
                 checked={editing.featured}
                 onChange={(checked) => setEditing({ ...editing, featured: checked })}
               />

@@ -1,240 +1,129 @@
-# Vidora Ads Standalone
+# Vidora Ads Standalone v1.2.0
 
-مشروع مستقل بالكامل لإدارة وعرض إعلانات الكورسات.
+منصة مستقلة لعرض وإدارة إعلانات الكورسات على Cloudflare Workers + D1.
 
 ## Stack
-- Next.js App Router
-- React
-- TypeScript
-- Tailwind CSS
+
+- Next.js 16.3.3
+- React 19.2.8
+- TypeScript 5.9.3
+- OpenNext for Cloudflare 1.20.4
 - Cloudflare Workers
 - Cloudflare D1
 - Drizzle ORM
 - Zod
-- lucide-react icons
-
-## الاستقلال عن Vidora الأصلي
-هذا المشروع لا يستخدم قاعدة بيانات Vidora الأصلية ولا جلساته ولا ملفاته.
-استخدم Worker منفصل وD1 منفصلة.
-
-## 1) إنشاء قاعدة D1
-```powershell
-npx wrangler d1 create vidora-ads-standalone-db
-```
-
-انسخ `database_id` الناتج وضعه داخل `wrangler.jsonc`.
-
-## 2) إعداد Secrets
-```powershell
-npx wrangler secret put ADMIN_PASSWORD
-npx wrangler secret put SESSION_SECRET
-```
-
-اختر كلمة مرور للإدارة، وSESSION_SECRET عشوائي قوي.
-
-## 3) تثبيت الحزم
-```powershell
-npm install
-```
-
-## 4) تطبيق Migration محليًا
-```powershell
-npm run db:migrate:local
-```
-
-## 5) تطبيق Migration على Cloudflare
-```powershell
-npm run db:migrate:remote
-```
-
-## 6) النشر
-```powershell
-npm run cf:deploy
-```
+- Tailwind CSS
+- Lucide React icons
 
 ## الصفحات
-- `/` صفحة الإعلانات العامة
-- `/admin/login` دخول الأدمن
-- `/admin` لوحة إدارة الإعلانات
+
+- `/` — واجهة العروض العامة.
+- `/admin` — لوحة إدارة الإعلانات.
+- `/admin/setup` — إعداد الأدمن لأول مرة فقط.
+- `/admin/login` — تسجيل الدخول بعد الإعداد.
+
+## الإدارة التلقائية
+
+لا تحتاج إلى `ADMIN_PASSWORD` أو `SESSION_SECRET` في Cloudflare.
+
+في أول زيارة إلى `/admin`:
+
+1. يتم تحويلك إلى `/admin/setup`.
+2. تختار كلمة مرور الأدمن فقط.
+3. النظام ينشئ Salt ومفتاح Session عشوائيًا.
+4. كلمة المرور تحفظ كـ PBKDF2-SHA256 hash داخل D1.
+5. جداول الإدارة والإعلانات يتم إنشاؤها تلقائيًا إذا كانت غير موجودة.
+
+## D1
+
+Binding المستخدم في الكود:
+
+```text
+DB
+```
+
+Database:
+
+```text
+vidora-ads-standalone-db
+```
+
+الجداول الأساسية:
+
+- `advertisements`
+- `admin_settings`
+
+المشروع أصبح Self-initializing، لذلك عدم تطبيق migration يدويًا لا يمنع أول تشغيل طالما Binding `DB` صحيح.
+
+## Cloudflare Git Build
+
+استخدم الإعدادات التالية في Cloudflare Workers Builds:
+
+```text
+Build command:
+npx opennextjs-cloudflare build
+```
+
+```text
+Deploy command:
+npx opennextjs-cloudflare deploy
+```
+
+داخل `package.json` يجب أن يظل:
+
+```json
+"build": "next build"
+```
+
+لأن OpenNext يشغّل `next build` داخليًا. جعل `build` يشير إلى OpenNext نفسه يسبب Recursive Build.
+
+## إصلاحات v1.2.0
+
+- إصلاح حفظ الإعلانات وإظهار سبب الخطأ الحقيقي.
+- إنشاء جدول `advertisements` تلقائيًا عند الحاجة.
+- التحقق من الجلسة أثناء الحفظ والحذف والنسخ والتحديث.
+- رسائل Validation لكل حقل بدل رسالة عامة.
+- إصلاح رابط CTA الافتراضي غير الصالح `https://`.
+- السماح بحفظ Draft بدون CTA، مع إلزام CTA عند النشر.
+- إضافة `https://` تلقائيًا لرابط CTA إذا تم إدخال domain فقط.
+- دعم أفضل لروابط Google Drive وDropbox للصور.
+- التحقق من ترتيب بداية ونهاية العرض.
+- التحقق من الأسعار.
+- إضافة Logout وRefresh وفلاتر للحالات في لوحة الإدارة.
+- استبدال Emoji analytics بأيقونات SVG.
+- إصلاح View tracking ليعمل عند ظهور الإعلان للمستخدم.
+- إصلاح Click tracking بحيث لا يمنع فتح رابط التسجيل.
+- Analytics failures لا تكسر تجربة الزائر.
+- حماية أفضل لطلبات Admin ضد Cross-Origin requests.
+- Timing-safe comparison لتوقيع Session.
+- Error Boundary بدل صفحة Server Error الخام.
+- تثبيت إصدارات الحزم التي نجحت في Cloudflare لتقليل أخطاء تحديث dependencies مستقبلًا.
 
 ## الصور
-يدعم أي Public HTTPS Image URL مثل:
+
+يمكن استخدام Public HTTPS image URLs من خدمات مثل:
+
 - Cloudflare R2
 - AWS S3
 - Cloudinary
 - Firebase Storage
 - Supabase Storage
 - Google Cloud Storage
-- Google Drive public file links
+- Google Drive public links
 - Dropbox public links
 - أي CDN عام
 
-يتم تحويل Google Drive وDropbox تلقائيًا إلى شكل أنسب للعرض عند الحفظ.
+## ملاحظات مهمة
 
-## ملاحظات
-- لا يتم تضمين أي Secret داخل المشروع.
-- لا يتم تضمين node_modules.
-- قاعدة البيانات اسمها `vidora-ads-standalone-db`.
-- Worker اسمها `vidora-ads-standalone`.
+- لا توجد كلمات مرور أو Session secrets داخل GitHub.
+- D1 database ID ليس Secret، ويجب أن يكون موجودًا في `wrangler.jsonc` حتى يعمل الـbinding.
+- بيانات الإعلانات الحالية لا يتم حذفها عند التحديث إلى v1.2.0.
 
 
-## إذا ظهر:
-`Cannot retry a build that was created with a seed_repo override`
+## v1.3.0 — Images and Ad Types
 
-لا تستخدم Retry لذلك الـBuild. أنشئ Build جديد بإحدى الطريقتين:
-
-### من PowerShell
-```powershell
-Set-ExecutionPolicy -Scope Process Bypass -Force
-.\Deploy-Standalone.ps1
-```
-
-### أو عند استخدام GitHub
-ادفع Commit جديد:
-```powershell
-git add .
-git commit --allow-empty -m "Trigger Cloudflare build"
-git push
-```
-
-في Workers Builds، الـpush الجديد ينشئ Build جديدًا بدل Retry القديم.
-
-## إعداد Git Build في Cloudflare
-إذا ربطت المشروع بـ GitHub:
-- Build command: `npm run cf:build`
-- Deploy command: `npx wrangler deploy`
-- Root directory: `/` إذا كان المشروع في جذر الـrepository
-
-
-## v1.0.2 - Cloudflare D1 TypeScript build fix
-
-إذا ظهر أثناء `next build`:
-
-```text
-Cannot find name 'D1Database'
-```
-
-تم إصلاحه في v1.0.2 باستخدام الحزمة الرسمية:
-
-```text
-@cloudflare/workers-types
-```
-
-واستيراد:
-
-```ts
-import type { D1Database } from "@cloudflare/workers-types";
-```
-
-لذلك `npm run build` لا يحتاج إلى تشغيل `wrangler types` مسبقًا.
-
-يمكن استخدام الأمر التالي اختياريًا لفحص/توليد Bindings Types محليًا:
-
-```powershell
-npm run cf:types
-```
-
-
-## v1.0.3 - OpenNext Workers Build Fix
-
-Cloudflare Workers Builds may be configured with:
-
-```text
-Build command: npm run build
-Deploy command: npx wrangler deploy
-```
-
-In v1.0.3, `npm run build` now runs:
-
-```text
-opennextjs-cloudflare build
-```
-
-instead of plain:
-
-```text
-next build
-```
-
-This generates the required:
-
-```text
-.open-next/worker.js
-.open-next/assets/
-```
-
-before Wrangler deploys the Worker.
-
-For a plain Next.js-only diagnostic build, use:
-
-```powershell
-npm run next:build
-```
-
-
-## v1.0.4 - Recursive OpenNext Build Fix
-
-Correct Cloudflare Workers Builds settings:
-
-```text
-Build command:
-npx opennextjs-cloudflare build
-
-Deploy command:
-npx opennextjs-cloudflare deploy
-```
-
-`package.json` must keep:
-
-```json
-"build": "next build"
-```
-
-OpenNext calls the project's `build` script internally. Pointing that script back to OpenNext causes an infinite recursive build.
-
-
-## v1.1.1 — Automatic Admin Setup
-
-لم يعد المشروع يحتاج إلى إضافة:
-
-```text
-ADMIN_PASSWORD
-SESSION_SECRET
-```
-
-يدويًا في Cloudflare.
-
-أول مرة تفتح:
-
-```text
-/admin
-```
-
-سيتم تحويلك تلقائيًا إلى:
-
-```text
-/admin/setup
-```
-
-اختر كلمة مرور الإدارة فقط.
-
-النظام يقوم تلقائيًا بـ:
-- إنشاء Salt عشوائي.
-- Hash لكلمة المرور باستخدام PBKDF2-SHA256.
-- إنشاء Session Secret عشوائي.
-- حفظ إعداد الإدارة داخل D1.
-- إنشاء جلسة الدخول مباشرة.
-- إغلاق صفحة الإعداد بعد أول Setup.
-
-مهم: نفّذ الإعداد الأول فور نشر الموقع، لأن أول شخص يصل إلى صفحة Setup في قاعدة جديدة يمكنه إنشاء حساب الإدارة.
-
-
-## v1.1.2 — First Setup Fix
-
-If v1.1.1 showed:
-
-```text
-تعذر إكمال الإعداد
-```
-
-during the first admin setup, v1.1.2 reduces the PBKDF2 workload to a Cloudflare-friendly 100,000 iterations and adds clearer runtime diagnostics.
+- Cloud images now use a protected image proxy with direct-source fallback.
+- Supported common share links include Google Drive, Dropbox, OneDrive/SharePoint and GitHub, plus generic public HTTPS cloud storage.
+- Advertisement type can be **Available Course** or **Discount Offer**.
+- No manual D1 migration is required; older databases receive `ad_type` automatically.
+- Cloud files must be public/readable without login.
