@@ -15,7 +15,7 @@
     {
       "binding": "DB",
       "database_name": "vidora-ads-standalone-db",
-      "database_id": "2bf58d92-786a-4a57-99c3-e304b39b4246",
+      "database_id": "------------------",
       "migrations_dir": "drizzle"
     }
   ],
