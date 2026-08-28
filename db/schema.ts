@@ -33,6 +33,7 @@ export const adminSettings = sqliteTable("admin_settings", {
   id: integer("id").primaryKey(),
   passwordHash: text("password_hash").notNull(),
   passwordSalt: text("password_salt").notNull(),
+  passwordIterations: integer("password_iterations"),
   sessionSecret: text("session_secret").notNull(),
   createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
   updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull()

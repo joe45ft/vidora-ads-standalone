@@ -20,17 +20,26 @@ export async function POST(request: Request) {
 
     if (!password || !(await verifyAdminPassword(password))) {
       return NextResponse.json(
-        { error: "invalid_credentials", message: "كلمة المرور غير صحيحة." },
+        {
+          error: "invalid_credentials",
+          message: "كلمة المرور غير صحيحة."
+        },
         { status: 401 }
       );
     }
 
     await createAdminSession();
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({
+      ok: true,
+      passwordFormatUpgraded: true
+    });
   } catch (error) {
     console.error("Admin login failed:", error);
     return NextResponse.json(
-      { error: "login_failed", message: "تعذر تسجيل الدخول حاليًا." },
+      {
+        error: "login_failed",
+        message: "تعذر التحقق من بيانات الإدارة حاليًا. أعد المحاولة بعد تحديث الصفحة."
+      },
       { status: 500 }
     );
   }
