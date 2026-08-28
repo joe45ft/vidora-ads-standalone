@@ -170,3 +170,24 @@ For a plain Next.js-only diagnostic build, use:
 ```powershell
 npm run next:build
 ```
+
+
+## v1.0.4 - Recursive OpenNext Build Fix
+
+Correct Cloudflare Workers Builds settings:
+
+```text
+Build command:
+npx opennextjs-cloudflare build
+
+Deploy command:
+npx opennextjs-cloudflare deploy
+```
+
+`package.json` must keep:
+
+```json
+"build": "next build"
+```
+
+OpenNext calls the project's `build` script internally. Pointing that script back to OpenNext causes an infinite recursive build.
