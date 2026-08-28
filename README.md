@@ -76,3 +76,31 @@ npm run cf:deploy
 - لا يتم تضمين node_modules.
 - قاعدة البيانات اسمها `vidora-ads-standalone-db`.
 - Worker اسمها `vidora-ads-standalone`.
+
+
+## إذا ظهر:
+`Cannot retry a build that was created with a seed_repo override`
+
+لا تستخدم Retry لذلك الـBuild. أنشئ Build جديد بإحدى الطريقتين:
+
+### من PowerShell
+```powershell
+Set-ExecutionPolicy -Scope Process Bypass -Force
+.\Deploy-Standalone.ps1
+```
+
+### أو عند استخدام GitHub
+ادفع Commit جديد:
+```powershell
+git add .
+git commit --allow-empty -m "Trigger Cloudflare build"
+git push
+```
+
+في Workers Builds، الـpush الجديد ينشئ Build جديدًا بدل Retry القديم.
+
+## إعداد Git Build في Cloudflare
+إذا ربطت المشروع بـ GitHub:
+- Build command: `npm run cf:build`
+- Deploy command: `npx wrangler deploy`
+- Root directory: `/` إذا كان المشروع في جذر الـrepository
