@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, BadgePercent, Star } from "lucide-react";
+import { ArrowUpLeft, BadgePercent, Sparkles, Star } from "lucide-react";
 
 export type AdCardData = {
   id: string;
@@ -22,8 +22,8 @@ function discount(oldPrice: number | null, price: number) {
   return Math.round((1 - price / oldPrice) * 100);
 }
 
-export function AdCard({ ad }: { ad: AdCardData }) {
-  const d = discount(ad.originalPrice, ad.offerPrice);
+export function AdCard({ ad, featured = false }: { ad: AdCardData; featured?: boolean }) {
+  const percentage = discount(ad.originalPrice, ad.offerPrice);
 
   async function openAd() {
     try {
@@ -34,51 +34,88 @@ export function AdCard({ ad }: { ad: AdCardData }) {
   }
 
   return (
-    <article className="overflow-hidden rounded-3xl border border-white/10 bg-white/[0.035] transition hover:-translate-y-1 hover:border-violet-400/40">
-      <div className="relative aspect-[16/9] overflow-hidden bg-gradient-to-br from-slate-800 to-violet-900">
+    <article
+      className={[
+        "group overflow-hidden rounded-[1.7rem] border border-white/[0.085] bg-white/[0.035]",
+        "transition duration-300 hover:-translate-y-1 hover:border-violet-400/35 hover:bg-white/[0.045]",
+        featured ? "md:grid md:grid-cols-[1.05fr_.95fr]" : ""
+      ].join(" ")}
+    >
+      <div className={[
+        "relative overflow-hidden bg-gradient-to-br from-[#19142d] via-[#181c39] to-[#0f5971]",
+        featured ? "min-h-[280px] md:min-h-[360px]" : "aspect-[16/10]"
+      ].join(" ")}>
         {ad.imageUrl ? (
-          <img src={ad.imageUrl} alt={ad.courseName} className="h-full w-full object-cover" />
+          <img
+            src={ad.imageUrl}
+            alt={ad.courseName}
+            className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.025]"
+          />
         ) : (
-          <div className="grid h-full place-items-center text-5xl font-black text-white/25">V</div>
-        )}
-        <div className="absolute right-3 top-3 rounded-full bg-black/55 px-3 py-1 text-xs backdrop-blur">
-          {ad.category}
-        </div>
-        {ad.featured && (
-          <div className="absolute left-3 top-3 flex items-center gap-1 rounded-full bg-white px-3 py-1 text-xs font-bold text-slate-900">
-            <Star size={13} fill="currentColor" /> Featured
+          <div className="grid h-full min-h-[220px] place-items-center">
+            <div className="grid size-20 place-items-center rounded-3xl border border-white/15 bg-white/10 text-4xl font-black text-white/70">
+              V
+            </div>
           </div>
         )}
-      </div>
 
-      <div className="p-5">
-        <div className="mb-2 flex items-center justify-between gap-3 text-xs text-slate-400">
-          <span>{ad.title}</span>
-          {d > 0 && (
-            <span className="flex items-center gap-1 text-emerald-300">
-              <BadgePercent size={14} /> خصم {d}%
+        <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/5 to-transparent" />
+
+        <div className="absolute right-4 top-4 flex flex-wrap gap-2">
+          <span className="rounded-full border border-white/15 bg-black/45 px-3 py-1.5 text-xs font-bold backdrop-blur-md">
+            {ad.category}
+          </span>
+          {percentage > 0 && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-400 px-3 py-1.5 text-xs font-black text-emerald-950">
+              <BadgePercent size={13} />
+              {percentage}% خصم
             </span>
           )}
         </div>
 
-        <h3 className="text-xl font-bold">{ad.courseName}</h3>
-        <p className="mt-2 min-h-14 text-sm leading-7 text-slate-400">
-          {ad.headline || ad.description || "اكتشف تفاصيل هذا الكورس والعرض الحالي."}
+        {ad.featured && (
+          <div className="absolute bottom-4 right-4 inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-black/45 px-3 py-1.5 text-xs font-bold backdrop-blur-md">
+            <Star size={13} fill="currentColor" />
+            عرض مميز
+          </div>
+        )}
+      </div>
+
+      <div className={featured ? "flex flex-col justify-center p-7 md:p-9" : "p-5"}>
+        <div className="mb-2 flex items-center gap-2 text-xs font-bold text-violet-300">
+          <Sparkles size={14} />
+          {ad.title}
+        </div>
+
+        <h3 className={featured ? "text-3xl font-black leading-tight" : "text-xl font-black leading-snug"}>
+          {ad.courseName}
+        </h3>
+
+        <p className={[
+          "mt-3 text-slate-400",
+          featured ? "max-w-xl text-base leading-8" : "min-h-14 text-sm leading-7"
+        ].join(" ")}>
+          {ad.headline || ad.description || "اكتشف تفاصيل الكورس والعرض الحالي وسجل مباشرة."}
         </p>
 
-        <div className="mt-5 flex items-end justify-between gap-4 border-t border-white/10 pt-4">
+        <div className="mt-6 flex items-end justify-between gap-4 border-t border-white/10 pt-5">
           <div>
             {ad.originalPrice ? (
-              <div className="text-xs text-slate-600 line-through">{ad.originalPrice.toLocaleString()} EGP</div>
+              <div className="mb-1 text-sm text-slate-600 line-through">
+                {ad.originalPrice.toLocaleString()} EGP
+              </div>
             ) : null}
-            <div className="text-xl font-extrabold">{ad.offerPrice.toLocaleString()} EGP</div>
+            <div className="text-2xl font-black">
+              {ad.offerPrice.toLocaleString()} <span className="text-sm text-slate-400">EGP</span>
+            </div>
           </div>
+
           <button
             onClick={openAd}
-            className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-bold transition hover:bg-violet-500"
+            className="inline-flex items-center gap-2 rounded-2xl bg-violet-600 px-5 py-3 text-sm font-black transition hover:bg-violet-500 active:scale-[.98]"
           >
             {ad.ctaText}
-            <ArrowLeft size={16} />
+            <ArrowUpLeft size={17} />
           </button>
         </div>
       </div>

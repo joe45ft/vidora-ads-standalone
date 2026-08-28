@@ -1,92 +1,191 @@
 import Link from "next/link";
-import { BarChart3, Cloud, GraduationCap, ShieldCheck, Sparkles } from "lucide-react";
+import {
+  ArrowDown,
+  BookOpen,
+  ChevronLeft,
+  GraduationCap,
+  LayoutGrid,
+  Menu,
+  ShieldCheck,
+  Sparkles
+} from "lucide-react";
 import { listPublicAds } from "@/lib/ads";
 import { PublicOffers } from "@/components/public-offers";
+import { AdCard } from "@/components/ad-card";
 
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
   const ads = await listPublicAds();
+  const featured = ads.find((ad) => ad.featured) ?? ads[0] ?? null;
+  const regularAds = featured ? ads.filter((ad) => ad.id !== featured.id) : ads;
+  const categories = Array.from(new Set(ads.map((ad) => ad.category))).slice(0, 8);
 
   return (
-    <main>
-      <header className="sticky top-0 z-40 border-b border-white/10 bg-[#070b14]/80 backdrop-blur-xl">
-        <div className="mx-auto flex min-h-20 max-w-7xl items-center justify-between px-5">
-          <div className="flex items-center gap-3">
-            <div className="grid size-11 place-items-center rounded-2xl bg-violet-600 font-black">V</div>
-            <div>
-              <div className="font-black tracking-wide">VIDORA ADS</div>
-              <div className="text-xs text-slate-500">Independent Course Ads</div>
+    <main className="min-h-screen">
+      <header className="sticky top-0 z-50 border-b border-white/[0.07] bg-[#060a12]/80 backdrop-blur-xl">
+        <div className="page-shell flex min-h-20 items-center justify-between gap-5">
+          <Link href="/" className="flex items-center gap-3">
+            <div className="grid size-11 place-items-center rounded-2xl bg-gradient-to-br from-violet-600 to-indigo-500 font-black shadow-lg shadow-violet-950/30">
+              V
             </div>
-          </div>
+            <div>
+              <div className="font-black tracking-[.08em]">VIDORA ADS</div>
+              <div className="text-[11px] text-slate-500">Course Marketplace</div>
+            </div>
+          </Link>
+
+          <nav className="hidden items-center gap-7 text-sm font-bold text-slate-400 md:flex">
+            <a href="#home" className="transition hover:text-white">الرئيسية</a>
+            <a href="#featured" className="transition hover:text-white">العرض المميز</a>
+            <a href="#offers" className="transition hover:text-white">كل العروض</a>
+            <a href="#categories" className="transition hover:text-white">التصنيفات</a>
+          </nav>
 
           <Link
             href="/admin"
-            className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2 text-sm font-bold hover:bg-white/[0.07]"
+            className="rounded-xl border border-white/10 bg-white/[0.035] px-4 py-2.5 text-xs font-bold text-slate-300 transition hover:bg-white/[0.06] hover:text-white"
           >
             Admin
           </Link>
         </div>
       </header>
 
-      <section className="mx-auto grid max-w-7xl gap-12 px-5 py-20 lg:grid-cols-[1.1fr_.9fr] lg:items-center">
-        <div>
-          <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-violet-400/20 bg-violet-400/10 px-3 py-1.5 text-xs font-bold text-violet-300">
-            <Sparkles size={14} /> COURSE ADVERTISEMENTS
+      <section id="home" className="relative overflow-hidden border-b border-white/[0.06]">
+        <div className="hero-grid pointer-events-none absolute inset-0 opacity-60" />
+        <div className="page-shell relative py-24 text-center md:py-32">
+          <div className="mx-auto inline-flex items-center gap-2 rounded-full border border-violet-400/20 bg-violet-400/10 px-3 py-1.5 text-xs font-black text-violet-300">
+            <Sparkles size={14} />
+            اكتشف • قارن • سجّل
           </div>
-          <h1 className="max-w-3xl text-5xl font-black leading-tight md:text-7xl">
-            اعرض كورساتك بشكل <span className="text-violet-400">احترافي ومرن</span>
+
+          <h1 className="mx-auto mt-7 max-w-4xl text-5xl font-black leading-[1.18] md:text-7xl">
+            اكتشف الكورس المناسب لك
+            <span className="block bg-gradient-to-l from-violet-400 to-cyan-300 bg-clip-text text-transparent">
+              بأفضل عرض متاح
+            </span>
           </h1>
-          <p className="mt-6 max-w-2xl text-lg leading-8 text-slate-400">
-            مشروع مستقل لإدارة إعلانات الكورسات، الصور السحابية، العروض، الجدولة، والمحتوى المميز.
+
+          <p className="mx-auto mt-6 max-w-2xl text-base leading-8 text-slate-400 md:text-lg">
+            مكان واحد لعرض أحدث الكورسات والخصومات بشكل واضح وسريع، مع تسجيل مباشر من كل إعلان.
           </p>
 
-          <div className="mt-8 flex flex-wrap gap-3">
-            <a href="#offers" className="rounded-2xl bg-violet-600 px-6 py-3 font-bold hover:bg-violet-500">
-              شاهد العروض
+          <div className="mt-9 flex flex-wrap justify-center gap-3">
+            <a
+              href="#offers"
+              className="inline-flex items-center gap-2 rounded-2xl bg-violet-600 px-6 py-3.5 font-black transition hover:bg-violet-500"
+            >
+              تصفح العروض
+              <ArrowDown size={17} />
             </a>
-            <Link href="/admin" className="rounded-2xl border border-white/10 px-6 py-3 font-bold hover:bg-white/[0.05]">
-              إدارة الإعلانات
-            </Link>
-          </div>
-        </div>
-
-        <div className="card-glow rounded-[2rem] border border-white/10 bg-white/[0.035] p-5">
-          <div className="grid aspect-[4/3] place-items-center rounded-[1.5rem] bg-gradient-to-br from-violet-600 to-cyan-500/70">
-            <GraduationCap size={110} strokeWidth={1.3} />
-          </div>
-          <div className="grid gap-3 p-4 sm:grid-cols-3">
-            <div><strong className="block text-2xl">{ads.length}</strong><span className="text-xs text-slate-500">إعلان نشط</span></div>
-            <div><strong className="block text-2xl">D1</strong><span className="text-xs text-slate-500">Cloud Database</span></div>
-            <div><strong className="block text-2xl">HTTPS</strong><span className="text-xs text-slate-500">Cloud Images</span></div>
+            <a
+              href="#categories"
+              className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.03] px-6 py-3.5 font-black transition hover:bg-white/[0.055]"
+            >
+              التصنيفات
+              <LayoutGrid size={17} />
+            </a>
           </div>
         </div>
       </section>
 
-      <section id="offers" className="mx-auto max-w-7xl px-5 py-16">
-        <div className="mb-8">
-          <div className="text-xs font-bold tracking-widest text-violet-400">ACTIVE OFFERS</div>
-          <h2 className="mt-2 text-4xl font-black">إعلانات الكورسات</h2>
-        </div>
-        <PublicOffers ads={ads} />
-      </section>
-
-      <section className="mx-auto grid max-w-7xl gap-4 px-5 py-16 md:grid-cols-3">
-        {[
-          [Cloud, "صور من أي Cloud", "استخدم روابط HTTPS من R2 وS3 وCloudinary وDrive وغيرها."],
-          [ShieldCheck, "إدارة منفصلة", "المشروع وقاعدة البيانات والجلسات مستقلة بالكامل عن Vidora الأصلي."],
-          [BarChart3, "Analytics", "Views وClicks وCTR لكل إعلان مع لوحة إدارة مخصصة."]
-        ].map(([Icon, title, text]) => {
-          const C = Icon as typeof Cloud;
-          return (
-            <div key={String(title)} className="rounded-3xl border border-white/10 bg-white/[0.03] p-6">
-              <C size={28} className="text-violet-400" />
-              <h3 className="mt-4 text-lg font-bold">{title as string}</h3>
-              <p className="mt-2 text-sm leading-7 text-slate-500">{text as string}</p>
+      {featured && (
+        <section id="featured" className="page-shell py-16 md:py-20">
+          <div className="mb-7 flex items-end justify-between gap-4">
+            <div>
+              <div className="text-xs font-black tracking-[.2em] text-violet-400">FEATURED OFFER</div>
+              <h2 className="mt-2 text-3xl font-black md:text-4xl">العرض المميز</h2>
             </div>
-          );
-        })}
+            <a href="#offers" className="hidden items-center gap-1 text-sm font-bold text-slate-400 hover:text-white sm:inline-flex">
+              كل العروض
+              <ChevronLeft size={17} />
+            </a>
+          </div>
+          <AdCard ad={featured} featured />
+        </section>
+      )}
+
+      <section id="categories" className="border-y border-white/[0.06] bg-white/[0.012]">
+        <div className="page-shell py-14">
+          <div className="mb-7">
+            <div className="text-xs font-black tracking-[.2em] text-violet-400">CATEGORIES</div>
+            <h2 className="mt-2 text-3xl font-black">تصفح حسب التصنيف</h2>
+          </div>
+
+          {categories.length ? (
+            <div className="flex flex-wrap gap-3">
+              {categories.map((category) => (
+                <a
+                  key={category}
+                  href="#offers"
+                  className="inline-flex items-center gap-2 rounded-2xl border border-white/[0.08] bg-white/[0.03] px-4 py-3 text-sm font-bold text-slate-300 transition hover:border-violet-400/30 hover:bg-violet-500/10 hover:text-white"
+                >
+                  <BookOpen size={16} className="text-violet-400" />
+                  {category}
+                </a>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-slate-500">ستظهر التصنيفات هنا بعد نشر الإعلانات.</p>
+          )}
+        </div>
       </section>
+
+      <section id="offers" className="page-shell py-16 md:py-20">
+        <div className="mb-8">
+          <div className="text-xs font-black tracking-[.2em] text-violet-400">ALL OFFERS</div>
+          <h2 className="mt-2 text-3xl font-black md:text-4xl">أحدث الكورسات والعروض</h2>
+          <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-500">
+            استخدم البحث أو التصنيفات للوصول للكورس المناسب بسرعة.
+          </p>
+        </div>
+
+        <PublicOffers ads={regularAds.length ? regularAds : ads} />
+      </section>
+
+      <section className="page-shell pb-20">
+        <div className="grid gap-4 md:grid-cols-3">
+          {[
+            {
+              icon: GraduationCap,
+              title: "اختيار أسهل",
+              text: "معلومات واضحة عن الكورس والسعر والعرض قبل التسجيل."
+            },
+            {
+              icon: ShieldCheck,
+              title: "روابط مباشرة",
+              text: "كل إعلان يوجهك مباشرة إلى صفحة التسجيل أو التواصل المحددة."
+            },
+            {
+              icon: LayoutGrid,
+              title: "تنظيم أفضل",
+              text: "بحث وتصنيفات تساعدك على الوصول للمحتوى المناسب بسرعة."
+            }
+          ].map(({ icon: Icon, title, text }) => (
+            <div key={title} className="rounded-[1.6rem] border border-white/[0.08] bg-white/[0.025] p-6">
+              <div className="grid size-11 place-items-center rounded-2xl bg-violet-500/10 text-violet-300">
+                <Icon size={21} />
+              </div>
+              <h3 className="mt-4 font-black">{title}</h3>
+              <p className="mt-2 text-sm leading-7 text-slate-500">{text}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <footer className="border-t border-white/[0.07] bg-black/15">
+        <div className="page-shell flex flex-col gap-5 py-8 text-sm text-slate-500 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3">
+            <div className="grid size-9 place-items-center rounded-xl bg-violet-600 font-black text-white">V</div>
+            <div>
+              <div className="font-black text-slate-300">VIDORA ADS</div>
+              <div className="text-xs">Course Marketplace</div>
+            </div>
+          </div>
+
+          <div>© 2026 Vidora Ads. All rights reserved.</div>
+        </div>
+      </footer>
     </main>
   );
 }

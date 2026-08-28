@@ -2,6 +2,13 @@
 
 :root {
   color-scheme: dark;
+  --page: #060a12;
+  --panel: #0b111d;
+  --panel-2: #0e1625;
+  --text: #f6f7fb;
+  --muted: #8d99ad;
+  --line: rgba(255, 255, 255, .085);
+  --violet: #7c3cff;
 }
 
 html {
@@ -10,22 +17,56 @@ html {
 
 body {
   margin: 0;
+  min-height: 100vh;
   background:
-    radial-gradient(circle at 85% 10%, rgba(113, 100, 255, .15), transparent 30%),
-    radial-gradient(circle at 10% 85%, rgba(35, 211, 238, .08), transparent 28%),
-    #070b14;
-  color: #f7f8fb;
-  font-family: Arial, Helvetica, sans-serif;
+    radial-gradient(circle at 84% 10%, rgba(124, 60, 255, .12), transparent 30%),
+    radial-gradient(circle at 8% 35%, rgba(17, 174, 225, .07), transparent 30%),
+    var(--page);
+  color: var(--text);
+  font-family: "Cairo", "Tajawal", "Segoe UI", Tahoma, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
 
 * {
   box-sizing: border-box;
 }
 
-button, input, textarea, select {
+button,
+input,
+textarea,
+select {
   font: inherit;
 }
 
-.card-glow {
-  box-shadow: 0 25px 80px rgba(0, 0, 0, .28);
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+::selection {
+  background: rgba(124, 60, 255, .45);
+  color: white;
+}
+
+.page-shell {
+  width: min(1180px, calc(100% - 32px));
+  margin-inline: auto;
+}
+
+.surface {
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, .03);
+  backdrop-filter: blur(18px);
+}
+
+.soft-shadow {
+  box-shadow: 0 22px 70px rgba(0, 0, 0, .28);
+}
+
+.hero-grid {
+  background-image:
+    linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px);
+  background-size: 42px 42px;
+  mask-image: linear-gradient(to bottom, rgba(0,0,0,.7), transparent);
 }
