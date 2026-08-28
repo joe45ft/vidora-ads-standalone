@@ -14,16 +14,16 @@ Write-Host "[2/5] TypeScript check..." -ForegroundColor Yellow
 npm run typecheck
 if ($LASTEXITCODE -ne 0) { throw "TypeScript check failed" }
 
-Write-Host "[3/5] Building OpenNext..." -ForegroundColor Yellow
-npm run cf:build
+Write-Host "[3/5] Building OpenNext output..." -ForegroundColor Yellow
+npm run build
 if ($LASTEXITCODE -ne 0) { throw "OpenNext build failed" }
 
 Write-Host "[4/5] Applying remote D1 migrations..." -ForegroundColor Yellow
 npm run db:migrate:remote
 if ($LASTEXITCODE -ne 0) { throw "D1 migration failed" }
 
-Write-Host "[5/5] Deploying a NEW Worker version..." -ForegroundColor Yellow
-npx opennextjs-cloudflare deploy
+Write-Host "[5/5] Deploying generated OpenNext Worker..." -ForegroundColor Yellow
+npx wrangler deploy
 if ($LASTEXITCODE -ne 0) { throw "Cloudflare deploy failed" }
 
 Write-Host "Deployment completed." -ForegroundColor Green

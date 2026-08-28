@@ -133,3 +133,40 @@ import type { D1Database } from "@cloudflare/workers-types";
 ```powershell
 npm run cf:types
 ```
+
+
+## v1.0.3 - OpenNext Workers Build Fix
+
+Cloudflare Workers Builds may be configured with:
+
+```text
+Build command: npm run build
+Deploy command: npx wrangler deploy
+```
+
+In v1.0.3, `npm run build` now runs:
+
+```text
+opennextjs-cloudflare build
+```
+
+instead of plain:
+
+```text
+next build
+```
+
+This generates the required:
+
+```text
+.open-next/worker.js
+.open-next/assets/
+```
+
+before Wrangler deploys the Worker.
+
+For a plain Next.js-only diagnostic build, use:
+
+```powershell
+npm run next:build
+```
