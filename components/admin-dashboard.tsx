@@ -382,6 +382,9 @@ export function AdminDashboard({ initialAds }: { initialAds: Ad[] }) {
             <button onClick={() => edit()} className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-bold hover:bg-violet-500">
               <Plus size={17} /> إضافة إعلان
             </button>
+            <button onClick={() => { window.location.href = "/admin/settings"; }} className="inline-flex items-center gap-2 rounded-xl border border-violet-400/20 bg-violet-500/10 px-4 py-2.5 text-sm font-bold text-violet-300 hover:bg-violet-500/15">
+              <Settings2 size={16} /> إعدادات الموقع
+            </button>
             <button onClick={() => { window.location.href = "/admin/security"; }} className="inline-flex items-center gap-2 rounded-xl border border-white/10 px-4 py-2.5 text-sm font-bold text-slate-300 hover:bg-white/[0.04]">
               <ShieldCheck size={16} /> الأمان
             </button>
@@ -397,6 +400,27 @@ export function AdminDashboard({ initialAds }: { initialAds: Ad[] }) {
           <Metric icon={<Eye />} label="إعلانات نشطة" value={metrics.active} />
           <Metric icon={<BarChart3 />} label="المشاهدات" value={metrics.views.toLocaleString()} />
           <Metric icon={<MousePointerClick />} label="النقرات" value={metrics.clicks.toLocaleString()} />
+        </section>
+
+        <section className="mt-5 rounded-3xl border border-violet-400/15 bg-violet-500/[0.05] p-5">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <div className="flex items-center gap-2 text-sm font-black text-violet-300">
+                <Settings2 size={17} />
+                إعدادات الموقع
+              </div>
+              <p className="mt-2 text-sm leading-6 text-slate-500">
+                غيّر اسم الموقع، الشعار، زر Contact / Support، ورسالة الدعم والفوتر من مكان واحد.
+              </p>
+            </div>
+
+            <button
+              onClick={() => { window.location.href = "/admin/settings"; }}
+              className="shrink-0 rounded-2xl bg-violet-600 px-5 py-3 text-sm font-black hover:bg-violet-500"
+            >
+              فتح الإعدادات
+            </button>
+          </div>
         </section>
 
         <section className="mt-7 rounded-3xl border border-white/10 bg-white/[0.03] p-5">
