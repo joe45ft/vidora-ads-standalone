@@ -18,6 +18,7 @@ import {
   RefreshCw,
   Save,
   Search,
+  ShieldCheck,
   Star,
   Trash2,
   X
@@ -379,6 +380,9 @@ export function AdminDashboard({ initialAds }: { initialAds: Ad[] }) {
             </button>
             <button onClick={() => edit()} className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-bold hover:bg-violet-500">
               <Plus size={17} /> إضافة إعلان
+            </button>
+            <button onClick={() => { window.location.href = "/admin/security"; }} className="inline-flex items-center gap-2 rounded-xl border border-white/10 px-4 py-2.5 text-sm font-bold text-slate-300 hover:bg-white/[0.04]">
+              <ShieldCheck size={16} /> الأمان
             </button>
             <button onClick={() => void logout()} className="inline-flex items-center gap-2 rounded-xl border border-white/10 px-4 py-2.5 text-sm font-bold text-slate-400 hover:bg-white/[0.04] hover:text-white">
               <LogOut size={16} /> خروج

@@ -4,6 +4,7 @@ import type { D1Database } from "@cloudflare/workers-types";
 export type Env = {
   DB: D1Database;
   APP_NAME?: string;
+  ADMIN_PASSWORD?: string;
 };
 
 export function getEnv(): Env {

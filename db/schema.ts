@@ -35,6 +35,11 @@ export const adminSettings = sqliteTable("admin_settings", {
   passwordSalt: text("password_salt").notNull(),
   passwordIterations: integer("password_iterations"),
   sessionSecret: text("session_secret").notNull(),
+  sessionVersion: integer("session_version").default(1),
+  recoveryCodeHash: text("recovery_code_hash"),
+  failedLoginCount: integer("failed_login_count").default(0),
+  lockedUntil: integer("locked_until", { mode: "timestamp_ms" }),
+  lastLoginAt: integer("last_login_at", { mode: "timestamp_ms" }),
   createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
   updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull()
 });
