@@ -5,7 +5,6 @@ import {
   ChevronLeft,
   GraduationCap,
   LayoutGrid,
-  Menu,
   ShieldCheck,
   Sparkles
 } from "lucide-react";
@@ -18,7 +17,6 @@ export const dynamic = "force-dynamic";
 export default async function HomePage() {
   const ads = await listPublicAds();
   const featured = ads.find((ad) => ad.featured) ?? ads[0] ?? null;
-  const regularAds = featured ? ads.filter((ad) => ad.id !== featured.id) : ads;
   const categories = Array.from(new Set(ads.map((ad) => ad.category))).slice(0, 8);
 
   return (
@@ -37,7 +35,7 @@ export default async function HomePage() {
 
           <nav className="hidden items-center gap-7 text-sm font-bold text-slate-400 md:flex">
             <a href="#home" className="transition hover:text-white">الرئيسية</a>
-            <a href="#featured" className="transition hover:text-white">العرض المميز</a>
+            {featured && <a href="#featured" className="transition hover:text-white">العرض المميز</a>}
             <a href="#offers" className="transition hover:text-white">كل العروض</a>
             <a href="#categories" className="transition hover:text-white">التصنيفات</a>
           </nav>
@@ -140,7 +138,7 @@ export default async function HomePage() {
           </p>
         </div>
 
-        <PublicOffers ads={regularAds.length ? regularAds : ads} />
+        <PublicOffers ads={ads} />
       </section>
 
       <section className="page-shell pb-20">

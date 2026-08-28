@@ -5,11 +5,21 @@ import {
 } from "@/lib/admin-settings";
 
 const COOKIE = "vidora_ads_admin";
+const SESSION_MAX_AGE_MS = 12 * 60 * 60 * 1000;
 
 function hex(buffer: ArrayBuffer) {
   return Array.from(new Uint8Array(buffer))
     .map((byte) => byte.toString(16).padStart(2, "0"))
     .join("");
+}
+
+function timingSafeEqual(a: string, b: string) {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i += 1) {
+    diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  }
+  return diff === 0;
 }
 
 async function sign(value: string) {
@@ -37,7 +47,7 @@ export async function createAdminSession() {
     secure: true,
     sameSite: "strict",
     path: "/",
-    maxAge: 60 * 60 * 12
+    maxAge: Math.floor(SESSION_MAX_AGE_MS / 1000)
   });
 }
 
@@ -51,14 +61,19 @@ export async function isAdminAuthenticated() {
   const value = store.get(COOKIE)?.value;
   if (!value) return false;
 
-  const [issued, signature] = value.split(".");
+  const separator = value.lastIndexOf(".");
+  if (separator < 1) return false;
+
+  const issued = value.slice(0, separator);
+  const signature = value.slice(separator + 1);
   if (!issued || !signature) return false;
 
-  const age = Date.now() - Number(issued);
-  if (!Number.isFinite(age) || age < 0 || age > 12 * 60 * 60 * 1000) return false;
+  const issuedNumber = Number(issued);
+  const age = Date.now() - issuedNumber;
+  if (!Number.isFinite(issuedNumber) || age < 0 || age > SESSION_MAX_AGE_MS) return false;
 
   try {
-    return (await sign(issued)) === signature;
+    return timingSafeEqual(await sign(issued), signature);
   } catch {
     return false;
   }

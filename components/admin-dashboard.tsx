@@ -2,8 +2,24 @@
 
 import { useMemo, useState } from "react";
 import {
-  Archive, BarChart3, Copy, Edit3, Eye, MousePointerClick, Plus, Search,
-  Star, Trash2, UploadCloud, X
+  AlertCircle,
+  Archive,
+  BarChart3,
+  CheckCircle2,
+  Copy,
+  Edit3,
+  Eye,
+  Image as ImageIcon,
+  Loader2,
+  LogOut,
+  MousePointerClick,
+  Plus,
+  RefreshCw,
+  Save,
+  Search,
+  Star,
+  Trash2,
+  X
 } from "lucide-react";
 
 type Ad = {
@@ -47,38 +63,122 @@ type FormState = {
   endsAt: string;
 };
 
+type ApiIssue = { field: string; message: string };
+type ApiPayload = {
+  ok?: boolean;
+  error?: string;
+  message?: string;
+  issues?: ApiIssue[];
+};
+
+type Toast = { type: "success" | "error"; text: string } | null;
+
+type StatusKey = "all" | "Active" | "Draft" | "Scheduled" | "Expired" | "Archived";
+
 const emptyForm: FormState = {
-  title: "", courseName: "", category: "General", headline: "", description: "",
-  imageUrl: "", originalPrice: "", offerPrice: "", ctaText: "سجل الآن", ctaUrl: "https://",
-  featured: false, published: true, archived: false, startsAt: "", endsAt: ""
+  title: "",
+  courseName: "",
+  category: "General",
+  headline: "",
+  description: "",
+  imageUrl: "",
+  originalPrice: "",
+  offerPrice: "",
+  ctaText: "سجل الآن",
+  ctaUrl: "",
+  featured: false,
+  published: true,
+  archived: false,
+  startsAt: "",
+  endsAt: ""
 };
 
 function toLocalInput(value: string | Date | null) {
   if (!value) return "";
   const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "";
   const offset = d.getTimezoneOffset();
   return new Date(d.getTime() - offset * 60000).toISOString().slice(0, 16);
 }
 
 function status(ad: Ad) {
-  if (ad.archived) return "Archived";
-  if (!ad.published) return "Draft";
+  if (ad.archived) return "Archived" as const;
+  if (!ad.published) return "Draft" as const;
   const now = Date.now();
-  if (ad.startsAt && new Date(ad.startsAt).getTime() > now) return "Scheduled";
-  if (ad.endsAt && new Date(ad.endsAt).getTime() < now) return "Expired";
-  return "Active";
+  if (ad.startsAt && new Date(ad.startsAt).getTime() > now) return "Scheduled" as const;
+  if (ad.endsAt && new Date(ad.endsAt).getTime() < now) return "Expired" as const;
+  return "Active" as const;
+}
+
+function statusLabel(value: ReturnType<typeof status>) {
+  return {
+    Active: "نشط",
+    Draft: "مسودة",
+    Scheduled: "مجدول",
+    Expired: "منتهي",
+    Archived: "مؤرشف"
+  }[value];
+}
+
+function validateForm(form: FormState) {
+  const errors: Record<string, string> = {};
+  if (form.title.trim().length < 2) errors.title = "اسم الإعلان مطلوب.";
+  if (form.courseName.trim().length < 2) errors.courseName = "اسم الكورس مطلوب.";
+  if (form.category.trim().length < 2) errors.category = "التصنيف مطلوب.";
+
+  const offer = Number(form.offerPrice);
+  if (!form.offerPrice.trim()) errors.offerPrice = "سعر العرض مطلوب.";
+  else if (!Number.isInteger(offer) || offer < 0) errors.offerPrice = "أدخل سعرًا صحيحًا بدون كسور.";
+
+  if (form.originalPrice.trim()) {
+    const original = Number(form.originalPrice);
+    if (!Number.isInteger(original) || original < 0) {
+      errors.originalPrice = "أدخل سعرًا صحيحًا بدون كسور.";
+    } else if (Number.isFinite(offer) && original < offer) {
+      errors.originalPrice = "السعر الأصلي يجب ألا يكون أقل من سعر العرض.";
+    }
+  }
+
+  if (!form.ctaText.trim()) errors.ctaText = "نص الزر مطلوب.";
+  if (form.published && !form.archived && !form.ctaUrl.trim()) {
+    errors.ctaUrl = "رابط التسجيل مطلوب عند نشر الإعلان.";
+  }
+
+  if (form.imageUrl.trim() && !/^https:\/\//i.test(form.imageUrl.trim()) && !/^[\w.-]+\.[a-z]{2,}/i.test(form.imageUrl.trim())) {
+    errors.imageUrl = "استخدم رابط HTTPS عام للصورة.";
+  }
+
+  if (form.startsAt && form.endsAt) {
+    if (new Date(form.endsAt).getTime() <= new Date(form.startsAt).getTime()) {
+      errors.endsAt = "نهاية العرض يجب أن تكون بعد البداية.";
+    }
+  }
+
+  return errors;
+}
+
+async function readPayload(response: Response): Promise<ApiPayload> {
+  return response.json().catch(() => ({}));
 }
 
 export function AdminDashboard({ initialAds }: { initialAds: Ad[] }) {
   const [ads, setAds] = useState(initialAds);
   const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState<StatusKey>("all");
   const [editing, setEditing] = useState<FormState | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [toast, setToast] = useState<Toast>(null);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return ads.filter((ad) => `${ad.title} ${ad.courseName} ${ad.category}`.toLowerCase().includes(q));
-  }, [ads, query]);
+    return ads.filter((ad) => {
+      const textMatch = `${ad.title} ${ad.courseName} ${ad.category}`.toLowerCase().includes(q);
+      const statusMatch = filter === "all" || status(ad) === filter;
+      return textMatch && statusMatch;
+    });
+  }, [ads, query, filter]);
 
   const metrics = useMemo(() => ({
     active: ads.filter((ad) => status(ad) === "Active").length,
@@ -86,11 +186,18 @@ export function AdminDashboard({ initialAds }: { initialAds: Ad[] }) {
     clicks: ads.reduce((sum, ad) => sum + ad.clicks, 0)
   }), [ads]);
 
+  function showToast(type: "success" | "error", text: string) {
+    setToast({ type, text });
+    window.setTimeout(() => setToast(null), 4500);
+  }
+
   function edit(ad?: Ad) {
+    setFieldErrors({});
     if (!ad) {
       setEditing({ ...emptyForm });
       return;
     }
+
     setEditing({
       id: ad.id,
       title: ad.title,
@@ -111,25 +218,53 @@ export function AdminDashboard({ initialAds }: { initialAds: Ad[] }) {
     });
   }
 
-  async function reload() {
-    const response = await fetch("/api/admin/ads");
-    if (response.ok) setAds(await response.json());
+  async function reload(showSuccess = false) {
+    setLoading(true);
+    try {
+      const response = await fetch("/api/admin/ads", { cache: "no-store" });
+      if (response.status === 401) {
+        window.location.href = "/admin/login";
+        return;
+      }
+
+      if (!response.ok) {
+        const data = await readPayload(response);
+        throw new Error(data.message || "تعذر تحميل الإعلانات.");
+      }
+
+      setAds(await response.json());
+      if (showSuccess) showToast("success", "تم تحديث البيانات.");
+    } catch (error) {
+      showToast("error", error instanceof Error ? error.message : "تعذر تحميل الإعلانات.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function save() {
-    if (!editing) return;
+    if (!editing || busy) return;
+
+    const localErrors = validateForm(editing);
+    if (Object.keys(localErrors).length) {
+      setFieldErrors(localErrors);
+      showToast("error", "راجع الحقول المحددة قبل الحفظ.");
+      return;
+    }
+
+    setFieldErrors({});
     setBusy(true);
+
     const payload = {
-      title: editing.title,
-      courseName: editing.courseName,
-      category: editing.category,
-      headline: editing.headline || null,
-      description: editing.description || null,
-      imageUrl: editing.imageUrl || null,
-      originalPrice: editing.originalPrice ? Number(editing.originalPrice) : null,
+      title: editing.title.trim(),
+      courseName: editing.courseName.trim(),
+      category: editing.category.trim(),
+      headline: editing.headline.trim() || null,
+      description: editing.description.trim() || null,
+      imageUrl: editing.imageUrl.trim() || null,
+      originalPrice: editing.originalPrice.trim() ? Number(editing.originalPrice) : null,
       offerPrice: Number(editing.offerPrice),
-      ctaText: editing.ctaText,
-      ctaUrl: editing.ctaUrl,
+      ctaText: editing.ctaText.trim(),
+      ctaUrl: editing.ctaUrl.trim(),
       featured: editing.featured,
       published: editing.published,
       archived: editing.archived,
@@ -137,146 +272,272 @@ export function AdminDashboard({ initialAds }: { initialAds: Ad[] }) {
       endsAt: editing.endsAt ? new Date(editing.endsAt).toISOString() : null
     };
 
-    const response = await fetch(editing.id ? `/api/admin/ads/${editing.id}` : "/api/admin/ads", {
-      method: editing.id ? "PUT" : "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(payload)
-    });
+    try {
+      const response = await fetch(editing.id ? `/api/admin/ads/${editing.id}` : "/api/admin/ads", {
+        method: editing.id ? "PUT" : "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(payload)
+      });
 
-    setBusy(false);
-    if (!response.ok) {
-      alert("تعذر حفظ الإعلان.");
-      return;
+      const data = await readPayload(response);
+
+      if (response.status === 401) {
+        window.location.href = "/admin/login";
+        return;
+      }
+
+      if (!response.ok) {
+        if (data.issues?.length) {
+          setFieldErrors(Object.fromEntries(data.issues.map((issue) => [issue.field, issue.message])));
+        }
+        throw new Error(data.message || "تعذر حفظ الإعلان.");
+      }
+
+      setEditing(null);
+      await reload();
+      showToast("success", editing.id ? "تم تحديث الإعلان بنجاح." : "تم إنشاء الإعلان بنجاح.");
+    } catch (error) {
+      showToast("error", error instanceof Error ? error.message : "تعذر حفظ الإعلان.");
+    } finally {
+      setBusy(false);
     }
-
-    setEditing(null);
-    await reload();
   }
 
   async function remove(id: string) {
-    if (!confirm("حذف الإعلان؟")) return;
-    await fetch(`/api/admin/ads/${id}`, { method: "DELETE" });
-    await reload();
+    if (!window.confirm("هل تريد حذف هذا الإعلان نهائيًا؟")) return;
+
+    try {
+      const response = await fetch(`/api/admin/ads/${id}`, { method: "DELETE" });
+      const data = await readPayload(response);
+      if (response.status === 401) {
+        window.location.href = "/admin/login";
+        return;
+      }
+      if (!response.ok) throw new Error(data.message || "تعذر حذف الإعلان.");
+      await reload();
+      showToast("success", "تم حذف الإعلان.");
+    } catch (error) {
+      showToast("error", error instanceof Error ? error.message : "تعذر حذف الإعلان.");
+    }
   }
 
   async function duplicate(id: string) {
-    await fetch(`/api/admin/ads/${id}/duplicate`, { method: "POST" });
-    await reload();
+    try {
+      const response = await fetch(`/api/admin/ads/${id}/duplicate`, { method: "POST" });
+      const data = await readPayload(response);
+      if (response.status === 401) {
+        window.location.href = "/admin/login";
+        return;
+      }
+      if (!response.ok) throw new Error(data.message || "تعذر نسخ الإعلان.");
+      await reload();
+      showToast("success", "تم إنشاء نسخة كمسودة.");
+    } catch (error) {
+      showToast("error", error instanceof Error ? error.message : "تعذر نسخ الإعلان.");
+    }
+  }
+
+  async function logout() {
+    await fetch("/api/admin/logout", { method: "POST" }).catch(() => undefined);
+    window.location.href = "/admin/login";
   }
 
   return (
     <main className="min-h-screen">
+      {toast && (
+        <div className="fixed left-1/2 top-5 z-[80] w-[min(92vw,520px)] -translate-x-1/2">
+          <div className={`flex items-start gap-3 rounded-2xl border px-4 py-3 shadow-2xl backdrop-blur-xl ${toast.type === "success" ? "border-emerald-400/20 bg-emerald-950/90 text-emerald-100" : "border-rose-400/20 bg-rose-950/90 text-rose-100"}`}>
+            {toast.type === "success" ? <CheckCircle2 className="mt-0.5 shrink-0" size={19} /> : <AlertCircle className="mt-0.5 shrink-0" size={19} />}
+            <div className="flex-1 text-sm font-bold leading-6">{toast.text}</div>
+            <button onClick={() => setToast(null)} aria-label="إغلاق"><X size={17} /></button>
+          </div>
+        </div>
+      )}
+
       <header className="border-b border-white/10 bg-[#070b14]/85 px-5 py-5 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4">
           <div>
             <div className="text-xs font-bold tracking-widest text-violet-400">VIDORA ADS</div>
-            <h1 className="text-2xl font-black">Advertisements Manager</h1>
+            <h1 className="text-2xl font-black">إدارة الإعلانات</h1>
+            <p className="mt-1 text-xs text-slate-500">إدارة الكورسات والعروض والنشر والإحصائيات.</p>
           </div>
-          <button onClick={() => edit()} className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2.5 font-bold">
-            <Plus size={17} /> إضافة إعلان
-          </button>
+
+          <div className="flex flex-wrap gap-2">
+            <button onClick={() => void reload(true)} disabled={loading} className="inline-flex items-center gap-2 rounded-xl border border-white/10 px-4 py-2.5 text-sm font-bold hover:bg-white/[0.04] disabled:opacity-50">
+              <RefreshCw size={16} className={loading ? "animate-spin" : ""} /> تحديث
+            </button>
+            <button onClick={() => edit()} className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-bold hover:bg-violet-500">
+              <Plus size={17} /> إضافة إعلان
+            </button>
+            <button onClick={() => void logout()} className="inline-flex items-center gap-2 rounded-xl border border-white/10 px-4 py-2.5 text-sm font-bold text-slate-400 hover:bg-white/[0.04] hover:text-white">
+              <LogOut size={16} /> خروج
+            </button>
+          </div>
         </div>
       </header>
 
       <div className="mx-auto max-w-7xl px-5 py-8">
         <section className="grid gap-4 md:grid-cols-3">
-          <Metric icon={<Eye />} label="Active Ads" value={metrics.active} />
-          <Metric icon={<BarChart3 />} label="Views" value={metrics.views.toLocaleString()} />
-          <Metric icon={<MousePointerClick />} label="Clicks" value={metrics.clicks.toLocaleString()} />
+          <Metric icon={<Eye />} label="إعلانات نشطة" value={metrics.active} />
+          <Metric icon={<BarChart3 />} label="المشاهدات" value={metrics.views.toLocaleString()} />
+          <Metric icon={<MousePointerClick />} label="النقرات" value={metrics.clicks.toLocaleString()} />
         </section>
 
         <section className="mt-7 rounded-3xl border border-white/10 bg-white/[0.03] p-5">
-          <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div className="mb-5 flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
             <div>
-              <h2 className="text-xl font-black">All Advertisements</h2>
-              <p className="text-sm text-slate-500">إدارة كاملة من مشروع مستقل وقاعدة D1 مستقلة.</p>
+              <h2 className="text-xl font-black">كل الإعلانات</h2>
+              <p className="text-sm text-slate-500">{ads.length} إعلان محفوظ.</p>
             </div>
-            <label className="flex items-center gap-2 rounded-xl border border-white/10 bg-black/20 px-3 py-2">
-              <Search size={17} className="text-slate-500" />
-              <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search..." className="bg-transparent outline-none" />
-            </label>
+
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <select value={filter} onChange={(e) => setFilter(e.target.value as StatusKey)} className="rounded-xl border border-white/10 bg-[#0a101c] px-3 py-2.5 text-sm outline-none">
+                <option value="all">كل الحالات</option>
+                <option value="Active">نشط</option>
+                <option value="Draft">مسودة</option>
+                <option value="Scheduled">مجدول</option>
+                <option value="Expired">منتهي</option>
+                <option value="Archived">مؤرشف</option>
+              </select>
+
+              <label className="flex min-w-[260px] items-center gap-2 rounded-xl border border-white/10 bg-black/20 px-3 py-2">
+                <Search size={17} className="text-slate-500" />
+                <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="ابحث عن إعلان أو كورس..." className="w-full bg-transparent outline-none" />
+              </label>
+            </div>
           </div>
 
-          <div className="grid gap-3">
-            {filtered.map((ad) => (
-              <article key={ad.id} className="grid gap-4 rounded-2xl border border-white/10 bg-black/10 p-4 md:grid-cols-[90px_1fr_auto] md:items-center">
-                <div className="aspect-[4/3] overflow-hidden rounded-xl bg-slate-900">
-                  {ad.imageUrl ? <img src={ad.imageUrl} alt="" className="h-full w-full object-cover" /> : <div className="grid h-full place-items-center text-white/20">V</div>}
-                </div>
-
-                <div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h3 className="font-bold">{ad.courseName}</h3>
-                    {ad.featured && <Star size={15} className="text-amber-300" fill="currentColor" />}
-                    <span className="rounded-full border border-white/10 px-2 py-0.5 text-[11px] text-slate-400">{status(ad)}</span>
+          {filtered.length ? (
+            <div className="grid gap-3">
+              {filtered.map((ad) => (
+                <article key={ad.id} className="grid gap-4 rounded-2xl border border-white/10 bg-black/10 p-4 md:grid-cols-[100px_1fr_auto] md:items-center">
+                  <div className="aspect-[4/3] overflow-hidden rounded-xl bg-slate-900">
+                    {ad.imageUrl ? (
+                      <img src={ad.imageUrl} alt={ad.courseName} loading="lazy" className="h-full w-full object-cover" />
+                    ) : (
+                      <div className="grid h-full place-items-center text-white/20"><ImageIcon /></div>
+                    )}
                   </div>
-                  <div className="mt-1 text-sm text-slate-500">{ad.title} • {ad.category}</div>
-                  <div className="mt-2 text-xs text-slate-600">👁 {ad.views} • 🖱 {ad.clicks} • CTR {ad.views ? ((ad.clicks/ad.views)*100).toFixed(1) : "0.0"}%</div>
-                </div>
 
-                <div className="flex flex-wrap gap-2">
-                  <Action icon={<Edit3 size={15} />} onClick={() => edit(ad)}>Edit</Action>
-                  <Action icon={<Copy size={15} />} onClick={() => duplicate(ad.id)}>Duplicate</Action>
-                  <Action icon={<Trash2 size={15} />} onClick={() => remove(ad.id)}>Delete</Action>
-                </div>
-              </article>
-            ))}
-          </div>
+                  <div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3 className="font-bold">{ad.courseName}</h3>
+                      {ad.featured && <Star size={15} className="text-amber-300" fill="currentColor" />}
+                      <span className="rounded-full border border-white/10 px-2 py-0.5 text-[11px] text-slate-400">{statusLabel(status(ad))}</span>
+                    </div>
+                    <div className="mt-1 text-sm text-slate-500">{ad.title} • {ad.category}</div>
+                    <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-slate-600">
+                      <span className="inline-flex items-center gap-1"><Eye size={13} /> {ad.views}</span>
+                      <span className="inline-flex items-center gap-1"><MousePointerClick size={13} /> {ad.clicks}</span>
+                      <span>CTR {ad.views ? ((ad.clicks / ad.views) * 100).toFixed(1) : "0.0"}%</span>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2">
+                    <Action icon={<Edit3 size={15} />} onClick={() => edit(ad)}>تعديل</Action>
+                    <Action icon={<Copy size={15} />} onClick={() => void duplicate(ad.id)}>نسخ</Action>
+                    <Action danger icon={<Trash2 size={15} />} onClick={() => void remove(ad.id)}>حذف</Action>
+                  </div>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-dashed border-white/10 px-6 py-14 text-center">
+              <div className="mx-auto grid size-12 place-items-center rounded-2xl bg-violet-500/10 text-violet-300"><Archive size={21} /></div>
+              <h3 className="mt-4 font-black">لا توجد إعلانات مطابقة</h3>
+              <p className="mt-2 text-sm text-slate-500">أضف إعلانًا جديدًا أو غيّر البحث والفلاتر.</p>
+            </div>
+          )}
         </section>
       </div>
 
       {editing && (
-        <div className="fixed inset-0 z-50 grid place-items-center bg-black/70 p-4 backdrop-blur-sm">
-          <div className="max-h-[92vh] w-full max-w-4xl overflow-y-auto rounded-[2rem] border border-white/10 bg-[#0d1322] p-6 card-glow">
-            <div className="mb-5 flex items-center justify-between">
+        <div className="fixed inset-0 z-50 grid place-items-center bg-black/75 p-4 backdrop-blur-sm">
+          <div className="max-h-[94vh] w-full max-w-4xl overflow-y-auto rounded-[2rem] border border-white/10 bg-[#0d1322] p-6 shadow-2xl">
+            <div className="mb-6 flex items-start justify-between gap-4">
               <div>
                 <div className="text-xs font-bold tracking-widest text-violet-400">ADVERTISEMENT</div>
                 <h2 className="text-2xl font-black">{editing.id ? "تعديل الإعلان" : "إضافة إعلان"}</h2>
+                <p className="mt-1 text-xs text-slate-500">الحقول بعلامة * مطلوبة.</p>
               </div>
-              <button onClick={() => setEditing(null)} className="grid size-10 place-items-center rounded-xl border border-white/10"><X /></button>
+              <button onClick={() => setEditing(null)} disabled={busy} className="grid size-10 place-items-center rounded-xl border border-white/10 hover:bg-white/[0.04] disabled:opacity-50" aria-label="إغلاق"><X /></button>
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">
-              <Field label="اسم الإعلان"><input value={editing.title} onChange={e=>setEditing({...editing,title:e.target.value})} /></Field>
-              <Field label="اسم الكورس"><input value={editing.courseName} onChange={e=>setEditing({...editing,courseName:e.target.value})} /></Field>
-              <Field label="التصنيف"><input value={editing.category} onChange={e=>setEditing({...editing,category:e.target.value})} /></Field>
-              <Field label="العنوان التسويقي"><input value={editing.headline} onChange={e=>setEditing({...editing,headline:e.target.value})} /></Field>
-              <Field label="السعر الأصلي"><input type="number" value={editing.originalPrice} onChange={e=>setEditing({...editing,originalPrice:e.target.value})} /></Field>
-              <Field label="سعر العرض"><input type="number" value={editing.offerPrice} onChange={e=>setEditing({...editing,offerPrice:e.target.value})} /></Field>
-              <Field label="CTA Text"><input value={editing.ctaText} onChange={e=>setEditing({...editing,ctaText:e.target.value})} /></Field>
-              <Field label="CTA URL"><input value={editing.ctaUrl} onChange={e=>setEditing({...editing,ctaUrl:e.target.value})} /></Field>
-              <Field label="بداية العرض"><input type="datetime-local" value={editing.startsAt} onChange={e=>setEditing({...editing,startsAt:e.target.value})} /></Field>
-              <Field label="نهاية العرض"><input type="datetime-local" value={editing.endsAt} onChange={e=>setEditing({...editing,endsAt:e.target.value})} /></Field>
+              <Field required label="اسم الإعلان" error={fieldErrors.title}>
+                <input value={editing.title} onChange={(e) => setEditing({ ...editing, title: e.target.value })} placeholder="مثال: عرض الصيف" />
+              </Field>
+              <Field required label="اسم الكورس" error={fieldErrors.courseName}>
+                <input value={editing.courseName} onChange={(e) => setEditing({ ...editing, courseName: e.target.value })} placeholder="اسم الكورس" />
+              </Field>
+              <Field required label="التصنيف" error={fieldErrors.category}>
+                <input value={editing.category} onChange={(e) => setEditing({ ...editing, category: e.target.value })} placeholder="Cyber Security, English..." />
+              </Field>
+              <Field label="العنوان التسويقي" error={fieldErrors.headline}>
+                <input value={editing.headline} onChange={(e) => setEditing({ ...editing, headline: e.target.value })} placeholder="وصف قصير وجذاب" />
+              </Field>
+              <Field label="السعر الأصلي (EGP)" error={fieldErrors.originalPrice}>
+                <input type="number" min="0" step="1" value={editing.originalPrice} onChange={(e) => setEditing({ ...editing, originalPrice: e.target.value })} placeholder="اختياري" />
+              </Field>
+              <Field required label="سعر العرض (EGP)" error={fieldErrors.offerPrice}>
+                <input type="number" min="0" step="1" value={editing.offerPrice} onChange={(e) => setEditing({ ...editing, offerPrice: e.target.value })} placeholder="0 للكورس المجاني" />
+              </Field>
+              <Field required label="نص زر التسجيل" error={fieldErrors.ctaText}>
+                <input value={editing.ctaText} onChange={(e) => setEditing({ ...editing, ctaText: e.target.value })} />
+              </Field>
+              <Field required={editing.published && !editing.archived} label="رابط التسجيل / CTA" error={fieldErrors.ctaUrl} hint="يمكن كتابة الرابط بدون https وسيتم إضافته تلقائيًا.">
+                <input inputMode="url" value={editing.ctaUrl} onChange={(e) => setEditing({ ...editing, ctaUrl: e.target.value })} placeholder="https://example.com/register" />
+              </Field>
+              <Field label="بداية العرض" error={fieldErrors.startsAt}>
+                <input type="datetime-local" value={editing.startsAt} onChange={(e) => setEditing({ ...editing, startsAt: e.target.value })} />
+              </Field>
+              <Field label="نهاية العرض" error={fieldErrors.endsAt}>
+                <input type="datetime-local" value={editing.endsAt} onChange={(e) => setEditing({ ...editing, endsAt: e.target.value })} />
+              </Field>
+
               <div className="md:col-span-2">
-                <Field label="Cloud Image URL">
-                  <div className="flex items-center gap-2">
-                    <UploadCloud size={18} className="text-violet-400" />
-                    <input value={editing.imageUrl} onChange={e=>setEditing({...editing,imageUrl:e.target.value})} placeholder="https://..." />
+                <Field label="رابط صورة الإعلان" error={fieldErrors.imageUrl} hint="Google Drive وDropbox وروابط HTTPS العامة مدعومة.">
+                  <input inputMode="url" value={editing.imageUrl} onChange={(e) => setEditing({ ...editing, imageUrl: e.target.value })} placeholder="https://..." />
+                </Field>
+
+                {editing.imageUrl.trim() && /^https:\/\//i.test(editing.imageUrl.trim()) && (
+                  <div className="mt-3 overflow-hidden rounded-2xl border border-white/10 bg-black/20">
+                    <img src={editing.imageUrl.trim()} alt="معاينة الإعلان" className="max-h-64 w-full object-contain" />
                   </div>
+                )}
+              </div>
+
+              <div className="md:col-span-2">
+                <Field label="الوصف" error={fieldErrors.description}>
+                  <textarea rows={5} value={editing.description} onChange={(e) => setEditing({ ...editing, description: e.target.value })} placeholder="تفاصيل الكورس والعرض..." />
                 </Field>
               </div>
-              <div className="md:col-span-2"><Field label="الوصف"><textarea rows={4} value={editing.description} onChange={e=>setEditing({...editing,description:e.target.value})} /></Field></div>
             </div>
 
             <div className="mt-5 flex flex-wrap gap-3">
-              {[
-                ["Published","published"],["Featured","featured"],["Archived","archived"]
-              ].map(([label,key])=>(
-                <label key={key} className="flex items-center gap-2 rounded-xl border border-white/10 px-3 py-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={Boolean(editing[key as keyof FormState])}
-                    onChange={e=>setEditing({...editing,[key]:e.target.checked})}
-                  />
-                  {label}
-                </label>
-              ))}
+              <Toggle
+                label="منشور"
+                checked={editing.published}
+                disabled={editing.archived}
+                onChange={(checked) => setEditing({ ...editing, published: checked })}
+              />
+              <Toggle
+                label="عرض مميز"
+                checked={editing.featured}
+                onChange={(checked) => setEditing({ ...editing, featured: checked })}
+              />
+              <Toggle
+                label="مؤرشف"
+                checked={editing.archived}
+                onChange={(checked) => setEditing({ ...editing, archived: checked, published: checked ? false : editing.published })}
+              />
             </div>
 
-            <div className="mt-6 flex justify-end gap-3 border-t border-white/10 pt-5">
-              <button onClick={() => setEditing(null)} className="rounded-xl border border-white/10 px-4 py-2.5">إلغاء</button>
-              <button disabled={busy} onClick={save} className="rounded-xl bg-violet-600 px-5 py-2.5 font-bold disabled:opacity-60">
-                {busy ? "..." : "حفظ"}
+            <div className="mt-7 flex flex-col-reverse gap-3 border-t border-white/10 pt-5 sm:flex-row sm:justify-end">
+              <button disabled={busy} onClick={() => setEditing(null)} className="rounded-xl border border-white/10 px-5 py-2.5 hover:bg-white/[0.04] disabled:opacity-50">إلغاء</button>
+              <button disabled={busy} onClick={() => void save()} className="inline-flex items-center justify-center gap-2 rounded-xl bg-violet-600 px-6 py-2.5 font-bold hover:bg-violet-500 disabled:opacity-60">
+                {busy ? <Loader2 size={17} className="animate-spin" /> : <Save size={17} />}
+                {busy ? "جاري الحفظ..." : "حفظ الإعلان"}
               </button>
             </div>
           </div>
@@ -287,20 +548,40 @@ export function AdminDashboard({ initialAds }: { initialAds: Ad[] }) {
 }
 
 function Metric({ icon, label, value }: { icon: React.ReactNode; label: string; value: string | number }) {
-  return <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-5"><div className="text-violet-400">{icon}</div><strong className="mt-3 block text-3xl">{value}</strong><span className="text-sm text-slate-500">{label}</span></div>;
+  return (
+    <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-5">
+      <div className="text-violet-400">{icon}</div>
+      <strong className="mt-3 block text-3xl">{value}</strong>
+      <span className="text-sm text-slate-500">{label}</span>
+    </div>
+  );
 }
 
-function Action({ icon, children, onClick }: { icon: React.ReactNode; children: React.ReactNode; onClick: () => void }) {
-  return <button onClick={onClick} className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 px-3 py-2 text-xs hover:bg-white/[0.05]">{icon}{children}</button>;
+function Action({ icon, children, onClick, danger = false }: { icon: React.ReactNode; children: React.ReactNode; onClick: () => void; danger?: boolean }) {
+  return (
+    <button onClick={onClick} className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs transition ${danger ? "border-rose-400/15 text-rose-300 hover:bg-rose-500/10" : "border-white/10 hover:bg-white/[0.05]"}`}>
+      {icon}{children}
+    </button>
+  );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({ label, children, error, hint, required = false }: { label: string; children: React.ReactNode; error?: string; hint?: string; required?: boolean }) {
   return (
     <label className="grid gap-2 text-sm">
-      <span className="text-slate-400">{label}</span>
-      <div className="[&_input]:w-full [&_input]:rounded-xl [&_input]:border [&_input]:border-white/10 [&_input]:bg-black/20 [&_input]:px-3 [&_input]:py-2.5 [&_input]:outline-none [&_textarea]:w-full [&_textarea]:rounded-xl [&_textarea]:border [&_textarea]:border-white/10 [&_textarea]:bg-black/20 [&_textarea]:px-3 [&_textarea]:py-2.5 [&_textarea]:outline-none">
+      <span className="text-slate-400">{label}{required && <span className="mr-1 text-rose-400">*</span>}</span>
+      <div className={`[&_input]:w-full [&_input]:rounded-xl [&_input]:border [&_input]:bg-black/20 [&_input]:px-3 [&_input]:py-2.5 [&_input]:outline-none [&_input]:transition [&_textarea]:w-full [&_textarea]:rounded-xl [&_textarea]:border [&_textarea]:bg-black/20 [&_textarea]:px-3 [&_textarea]:py-2.5 [&_textarea]:outline-none [&_textarea]:transition ${error ? "[&_input]:border-rose-400/50 [&_textarea]:border-rose-400/50" : "[&_input]:border-white/10 [&_textarea]:border-white/10 [&_input]:focus:border-violet-400/50 [&_textarea]:focus:border-violet-400/50"}`}>
         {children}
       </div>
+      {error ? <span className="text-xs font-bold text-rose-400">{error}</span> : hint ? <span className="text-xs leading-5 text-slate-600">{hint}</span> : null}
+    </label>
+  );
+}
+
+function Toggle({ label, checked, onChange, disabled = false }: { label: string; checked: boolean; onChange: (checked: boolean) => void; disabled?: boolean }) {
+  return (
+    <label className={`flex items-center gap-2 rounded-xl border border-white/10 px-3 py-2 text-sm ${disabled ? "cursor-not-allowed opacity-40" : "cursor-pointer"}`}>
+      <input type="checkbox" checked={checked} disabled={disabled} onChange={(e) => onChange(e.target.checked)} />
+      {label}
     </label>
   );
 }

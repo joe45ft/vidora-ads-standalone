@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { advertisements } from "@/db/schema";
+import { apiError, rejectCrossOrigin } from "@/lib/api-utils";
+import { ensureAdvertisementsTable } from "@/lib/advertisements-table";
 import { isAdminAuthenticated } from "@/lib/auth";
 import { getDb } from "@/lib/db";
 import { listAllAds } from "@/lib/ads";
@@ -7,18 +9,42 @@ import { adInputSchema } from "@/lib/validation";
 import { normalizePublicImageUrl, validatePublicActionUrl } from "@/lib/url";
 
 function slugify(value: string) {
-  return value.toLowerCase().trim().replace(/[^\p{L}\p{N}]+/gu, "-").replace(/^-+|-+$/g, "").slice(0, 80);
+  return value
+    .toLowerCase()
+    .trim()
+    .replace(/[^\p{L}\p{N}]+/gu, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 80) || "course";
 }
 
 export async function GET() {
-  if (!(await isAdminAuthenticated())) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  return NextResponse.json(await listAllAds());
+  if (!(await isAdminAuthenticated())) {
+    return NextResponse.json(
+      { error: "unauthorized", message: "انتهت جلسة الإدارة. سجل الدخول مرة أخرى." },
+      { status: 401 }
+    );
+  }
+
+  try {
+    return NextResponse.json(await listAllAds());
+  } catch (error) {
+    return apiError(error, "تعذر تحميل الإعلانات.");
+  }
 }
 
 export async function POST(request: Request) {
-  if (!(await isAdminAuthenticated())) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  const originError = rejectCrossOrigin(request);
+  if (originError) return originError;
+
+  if (!(await isAdminAuthenticated())) {
+    return NextResponse.json(
+      { error: "unauthorized", message: "انتهت جلسة الإدارة. سجل الدخول مرة أخرى." },
+      { status: 401 }
+    );
+  }
 
   try {
+    await ensureAdvertisementsTable();
     const input = adInputSchema.parse(await request.json());
     const now = new Date();
     const id = crypto.randomUUID();
@@ -36,7 +62,9 @@ export async function POST(request: Request) {
       originalPrice: input.originalPrice ?? null,
       offerPrice: input.offerPrice,
       ctaText: input.ctaText,
-      ctaUrl: validatePublicActionUrl(input.ctaUrl),
+      ctaUrl: validatePublicActionUrl(input.ctaUrl, {
+        required: input.published && !input.archived
+      }),
       featured: input.featured,
       published: input.published,
       archived: input.archived,
@@ -50,6 +78,6 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ ok: true, id }, { status: 201 });
   } catch (error) {
-    return NextResponse.json({ error: "invalid_input", details: String(error) }, { status: 400 });
+    return apiError(error, "تعذر حفظ الإعلان.");
   }
 }

@@ -1,5 +1,6 @@
-import { and, asc, desc, eq, gt, isNull, lt, or, sql } from "drizzle-orm";
+import { and, desc, eq, gt, isNull, lt, or, sql } from "drizzle-orm";
 import { advertisements, type Advertisement } from "@/db/schema";
+import { ensureAdvertisementsTable } from "@/lib/advertisements-table";
 import { getDb } from "@/lib/db";
 
 export function getAdStatus(ad: Advertisement, now = new Date()) {
@@ -11,8 +12,10 @@ export function getAdStatus(ad: Advertisement, now = new Date()) {
 }
 
 export async function listPublicAds() {
+  await ensureAdvertisementsTable();
   const db = getDb();
   const now = new Date();
+
   return db
     .select()
     .from(advertisements)
@@ -28,6 +31,7 @@ export async function listPublicAds() {
 }
 
 export async function listAllAds() {
+  await ensureAdvertisementsTable();
   return getDb()
     .select()
     .from(advertisements)
@@ -35,6 +39,7 @@ export async function listAllAds() {
 }
 
 export async function incrementView(id: string) {
+  await ensureAdvertisementsTable();
   await getDb()
     .update(advertisements)
     .set({ views: sql`${advertisements.views} + 1` })
@@ -42,6 +47,7 @@ export async function incrementView(id: string) {
 }
 
 export async function incrementClick(id: string) {
+  await ensureAdvertisementsTable();
   await getDb()
     .update(advertisements)
     .set({ clicks: sql`${advertisements.clicks} + 1` })

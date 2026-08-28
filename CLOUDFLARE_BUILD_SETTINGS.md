@@ -1,62 +1,34 @@
-# Cloudflare Workers Build Settings
+# Cloudflare Workers Build Settings — Vidora Ads v1.2.0
 
-Use these exact settings.
-
-## Production branch
-
-Build command:
+Use these exact Git Build settings:
 
 ```text
+Build command:
 npx opennextjs-cloudflare build
 ```
 
-Deploy command:
-
 ```text
+Deploy command:
 npx opennextjs-cloudflare deploy
 ```
 
-Do NOT set the Cloudflare build command to `npm run build` for the adapter step.
 `package.json` intentionally keeps:
 
 ```json
 "build": "next build"
 ```
 
-because OpenNext invokes that script internally to build the Next.js application.
+OpenNext invokes the application's `build` script internally. Pointing `build` back to `opennextjs-cloudflare build` creates a recursive build loop.
 
-## Important
+## D1 binding
 
-Do not change:
-
-```json
-"build": "next build"
-```
-
-to:
-
-```json
-"build": "opennextjs-cloudflare build"
-```
-
-That creates recursive builds:
+The Worker uses:
 
 ```text
-OpenNext build
- -> package build
- -> OpenNext build
- -> package build
- -> ...
+Binding: DB
+Database: vidora-ads-standalone-db
 ```
 
-## D1
+`wrangler.jsonc` must contain the real D1 `database_id`.
 
-Cloudflare Workers Builds do not automatically apply the SQL migration just because the Worker deploys.
-
-After creating the D1 database and putting its real ID in `wrangler.jsonc`, apply:
-
-```powershell
-npx wrangler d1 migrations apply vidora-ads-standalone-db --remote
-```
-
-before using the application in production.
+The application self-creates `advertisements` and `admin_settings` with `CREATE TABLE IF NOT EXISTS` when needed. Migration files remain included for normal database management, but a missing unapplied migration no longer causes the first request/save to fail when the D1 binding itself is valid.

@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { ArrowUpLeft, BadgePercent, Sparkles, Star } from "lucide-react";
 
 export type AdCardData = {
@@ -22,19 +23,56 @@ function discount(oldPrice: number | null, price: number) {
   return Math.round((1 - price / oldPrice) * 100);
 }
 
+function trackClick(id: string) {
+  void fetch(`/api/ads/${id}/click`, {
+    method: "POST",
+    keepalive: true
+  }).catch(() => undefined);
+}
+
 export function AdCard({ ad, featured = false }: { ad: AdCardData; featured?: boolean }) {
   const percentage = discount(ad.originalPrice, ad.offerPrice);
+  const cardRef = useRef<HTMLElement | null>(null);
 
-  async function openAd() {
+  useEffect(() => {
+    const element = cardRef.current;
+    if (!element || typeof IntersectionObserver === "undefined") return;
+
+    const storageKey = `vidora-ad-view:${ad.id}`;
     try {
-      await fetch(`/api/ads/${ad.id}/click`, { method: "POST" });
-    } finally {
-      window.open(ad.ctaUrl, "_blank", "noopener,noreferrer");
+      if (sessionStorage.getItem(storageKey)) return;
+    } catch {
+      // Tracking can continue without sessionStorage.
     }
-  }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries.some((entry) => entry.isIntersecting && entry.intersectionRatio >= 0.45);
+        if (!visible) return;
+
+        try {
+          sessionStorage.setItem(storageKey, "1");
+        } catch {
+          // Ignore storage restrictions.
+        }
+
+        void fetch(`/api/ads/${ad.id}/view`, {
+          method: "POST",
+          keepalive: true
+        }).catch(() => undefined);
+
+        observer.disconnect();
+      },
+      { threshold: [0.45] }
+    );
+
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [ad.id]);
 
   return (
     <article
+      ref={cardRef}
       className={[
         "group overflow-hidden rounded-[1.7rem] border border-white/[0.085] bg-white/[0.035]",
         "transition duration-300 hover:-translate-y-1 hover:border-violet-400/35 hover:bg-white/[0.045]",
@@ -49,6 +87,7 @@ export function AdCard({ ad, featured = false }: { ad: AdCardData; featured?: bo
           <img
             src={ad.imageUrl}
             alt={ad.courseName}
+            loading={featured ? "eager" : "lazy"}
             className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.025]"
           />
         ) : (
@@ -110,13 +149,16 @@ export function AdCard({ ad, featured = false }: { ad: AdCardData; featured?: bo
             </div>
           </div>
 
-          <button
-            onClick={openAd}
+          <a
+            href={ad.ctaUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={() => trackClick(ad.id)}
             className="inline-flex items-center gap-2 rounded-2xl bg-violet-600 px-5 py-3 text-sm font-black transition hover:bg-violet-500 active:scale-[.98]"
           >
             {ad.ctaText}
             <ArrowUpLeft size={17} />
-          </button>
+          </a>
         </div>
       </div>
     </article>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { KeyRound, ShieldCheck } from "lucide-react";
+import { KeyRound, Loader2, ShieldCheck } from "lucide-react";
 
 export function AdminSetupForm() {
   const [password, setPassword] = useState("");
@@ -11,6 +11,7 @@ export function AdminSetupForm() {
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
+    if (busy) return;
     setError("");
 
     if (password.length < 8) {
@@ -25,36 +26,41 @@ export function AdminSetupForm() {
 
     setBusy(true);
 
-    const response = await fetch("/api/admin/setup", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ password })
-    });
+    try {
+      const response = await fetch("/api/admin/setup", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ password })
+      });
 
-    if (response.ok) {
-      window.location.href = "/admin";
-      return;
+      const data = await response.json().catch(() => ({}));
+
+      if (response.ok) {
+        window.location.href = "/admin";
+        return;
+      }
+
+      if (data?.error === "already_configured") {
+        window.location.href = "/admin/login";
+        return;
+      }
+
+      if (data?.error === "database_unavailable") {
+        setError("تعذر الوصول إلى قاعدة D1. تأكد من أن DB مربوط بالـWorker ثم أعد المحاولة.");
+        return;
+      }
+
+      if (data?.error === "crypto_failed") {
+        setError("تعذر إنشاء بيانات الحماية على Cloudflare. أعد المحاولة بعد نشر أحدث نسخة.");
+        return;
+      }
+
+      setError(data?.message || "تعذر إكمال إعداد الإدارة.");
+    } catch {
+      setError("تعذر الاتصال بالموقع أثناء الإعداد.");
+    } finally {
+      setBusy(false);
     }
-
-    const data = await response.json().catch(() => ({}));
-    setBusy(false);
-
-    if (data?.error === "already_configured") {
-      setError("تم إعداد الإدارة بالفعل.");
-      return;
-    }
-
-    if (data?.error === "database_unavailable") {
-      setError("تعذر الوصول إلى قاعدة D1. تأكد من ربط DB بالمشروع.");
-      return;
-    }
-
-    if (data?.error === "crypto_failed") {
-      setError("تعذر إنشاء بيانات الحماية على Cloudflare. استخدم النسخة الأحدث.");
-      return;
-    }
-
-    setError("تعذر إكمال الإعداد. راجع Runtime Logs في Cloudflare.");
   }
 
   return (
@@ -70,13 +76,13 @@ export function AdminSetupForm() {
 
       <h1 className="text-3xl font-black">إعداد الإدارة</h1>
       <p className="mt-3 text-sm leading-7 text-slate-500">
-        اختر كلمة مرور الأدمن مرة واحدة. الموقع سيولّد مفتاح الجلسة تلقائيًا ويحفظ الإعدادات بشكل آمن داخل D1.
+        اختر كلمة مرور الأدمن مرة واحدة. الموقع ينشئ مفتاح الجلسة والجداول المطلوبة تلقائيًا داخل D1.
       </p>
 
       <div className="mt-6 grid gap-3">
         <label className="grid gap-2 text-sm">
           <span className="text-slate-400">كلمة المرور</span>
-          <div className="flex items-center gap-2 rounded-2xl border border-white/10 bg-black/20 px-4">
+          <div className="flex items-center gap-2 rounded-2xl border border-white/10 bg-black/20 px-4 focus-within:border-violet-400/50">
             <KeyRound size={17} className="text-slate-500" />
             <input
               type="password"
@@ -95,17 +101,18 @@ export function AdminSetupForm() {
             autoComplete="new-password"
             value={confirm}
             onChange={(event) => setConfirm(event.target.value)}
-            className="w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 outline-none"
+            className="w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 outline-none focus:border-violet-400/50"
           />
         </label>
       </div>
 
-      {error && <div className="mt-4 text-sm text-rose-400">{error}</div>}
+      {error && <div className="mt-4 rounded-xl border border-rose-400/15 bg-rose-500/10 px-3 py-2 text-sm leading-6 text-rose-300">{error}</div>}
 
       <button
-        disabled={busy}
-        className="mt-6 w-full rounded-2xl bg-violet-600 px-4 py-3 font-black transition hover:bg-violet-500 disabled:opacity-60"
+        disabled={busy || password.length < 8 || confirm.length < 8}
+        className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-violet-600 px-4 py-3 font-black transition hover:bg-violet-500 disabled:opacity-60"
       >
+        {busy && <Loader2 size={17} className="animate-spin" />}
         {busy ? "جاري الإعداد..." : "إنشاء حساب الإدارة"}
       </button>
 

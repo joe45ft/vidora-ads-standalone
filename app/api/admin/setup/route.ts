@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
+import { rejectCrossOrigin } from "@/lib/api-utils";
 import { createAdminSession } from "@/lib/auth";
 import { isAdminConfigured, setupAdmin } from "@/lib/admin-settings";
+import { ensureAdvertisementsTable } from "@/lib/advertisements-table";
 
 export async function GET() {
   try {
@@ -15,6 +17,9 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  const originError = rejectCrossOrigin(request);
+  if (originError) return originError;
+
   try {
     if (await isAdminConfigured()) {
       return NextResponse.json({ error: "already_configured" }, { status: 409 });
@@ -27,6 +32,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "invalid_password" }, { status: 400 });
     }
 
+    await ensureAdvertisementsTable();
     await setupAdmin(password);
     await createAdminSession();
 
@@ -40,19 +46,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "already_configured" }, { status: 409 });
     }
 
-    if (
-      message.includes("D1") ||
-      message.includes("prepare") ||
-      message.includes("DB")
-    ) {
+    if (/D1|prepare|DB|database|SQLITE/i.test(message)) {
       return NextResponse.json({ error: "database_unavailable" }, { status: 503 });
     }
 
-    if (
-      message.includes("PBKDF2") ||
-      message.includes("deriveBits") ||
-      message.includes("OperationError")
-    ) {
+    if (/PBKDF2|deriveBits|OperationError/i.test(message)) {
       return NextResponse.json({ error: "crypto_failed" }, { status: 500 });
     }
 
