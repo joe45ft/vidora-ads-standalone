@@ -16,8 +16,33 @@ export function CourseDetailActions({
   supportUrl: string | null;
 }) {
   function register() {
+    const viewKey = `vidora-ad-view:${adId}`;
+    const clickKey = `vidora-ad-click:${adId}`;
+
+    try {
+      if (!sessionStorage.getItem(viewKey)) {
+        sessionStorage.setItem(viewKey, "1");
+        void fetch(`/api/ads/${adId}/view`, {
+          method: "POST",
+          keepalive: true
+        }).catch(() => undefined);
+      }
+
+      if (!sessionStorage.getItem(clickKey)) {
+        sessionStorage.setItem(clickKey, "1");
+        void fetch(`/api/ads/${adId}/click`, {
+          method: "POST",
+          keepalive: true
+        }).catch(() => undefined);
+      }
+    } catch {
+      void fetch(`/api/ads/${adId}/click`, {
+        method: "POST",
+        keepalive: true
+      }).catch(() => undefined);
+    }
+
     const target = window.open(ctaUrl, "_blank", "noopener,noreferrer");
-    fetch(`/api/ads/${adId}/click`, { method: "POST", keepalive: true }).catch(() => {});
     if (!target) window.location.href = ctaUrl;
   }
 

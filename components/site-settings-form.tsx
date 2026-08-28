@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ExternalLink, Save, Settings2 } from "lucide-react";
 import type { SiteSettings } from "@/lib/site-settings";
+import { CloudImage } from "@/components/cloud-image";
 
 export function SiteSettingsForm({ initial }: { initial: SiteSettings }) {
   const [form, setForm] = useState(initial);
@@ -83,6 +84,21 @@ export function SiteSettingsForm({ initial }: { initial: SiteSettings }) {
               className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3 outline-none focus:border-violet-400/50"
             />
           </label>
+
+          {form.logoUrl && (
+            <div className="md:col-span-2">
+              <div className="mb-2 text-xs font-bold text-slate-500">معاينة الشعار</div>
+              <div className="size-24 overflow-hidden rounded-3xl border border-white/10 bg-black/20">
+                <CloudImage
+                  src={form.logoUrl}
+                  alt="Logo preview"
+                  loading="eager"
+                  className="h-full w-full object-cover"
+                  fallbackClassName="grid h-full place-items-center bg-black/20 text-slate-600"
+                />
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

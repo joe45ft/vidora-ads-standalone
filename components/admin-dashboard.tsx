@@ -170,7 +170,7 @@ async function readPayload(response: Response): Promise<ApiPayload> {
   return response.json().catch(() => ({}));
 }
 
-export function AdminDashboard({ initialAds }: { initialAds: Ad[] }) {
+export function AdminDashboard({ initialAds, siteName }: { initialAds: Ad[]; siteName: string }) {
   const [ads, setAds] = useState(initialAds);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<StatusKey>("all");
@@ -370,7 +370,7 @@ export function AdminDashboard({ initialAds }: { initialAds: Ad[] }) {
       <header className="border-b border-white/10 bg-[#070b14]/85 px-5 py-5 backdrop-blur-xl">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4">
           <div>
-            <div className="text-xs font-bold tracking-widest text-violet-400">VIDORA ADS</div>
+            <div className="text-xs font-bold tracking-widest text-violet-400">{siteName}</div>
             <h1 className="text-2xl font-black">إدارة الإعلانات</h1>
             <p className="mt-1 text-xs text-slate-500">إدارة الكورسات والعروض والنشر والإحصائيات.</p>
           </div>
@@ -480,7 +480,7 @@ export function AdminDashboard({ initialAds }: { initialAds: Ad[] }) {
                     <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-slate-600">
                       <span className="inline-flex items-center gap-1"><Eye size={13} /> {ad.views}</span>
                       <span className="inline-flex items-center gap-1"><MousePointerClick size={13} /> {ad.clicks}</span>
-                      <span>CTR {ad.views ? ((ad.clicks / ad.views) * 100).toFixed(1) : "0.0"}%</span>
+                      <span>CTR {ad.views ? Math.min(100, (ad.clicks / ad.views) * 100).toFixed(1) : "0.0"}%</span>
                     </div>
                   </div>
 

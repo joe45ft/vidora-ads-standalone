@@ -11,6 +11,8 @@ import {
 import { getPublicAdBySlug } from "@/lib/ads";
 import { getSiteSettings } from "@/lib/site-settings";
 import { CourseDetailActions } from "@/components/course-detail-actions";
+import { CloudImage } from "@/components/cloud-image";
+import { CourseViewTracker } from "@/components/course-view-tracker";
 
 export const dynamic = "force-dynamic";
 
@@ -40,15 +42,20 @@ export default async function CoursePage({
 
   return (
     <main className="min-h-screen">
+      <CourseViewTracker adId={ad.id} />
       <header className="border-b border-white/[0.07] bg-[#060a12]/85 backdrop-blur-xl">
         <div className="page-shell flex min-h-20 items-center justify-between gap-4">
           <Link href="/" className="flex items-center gap-3">
             {settings.logoUrl ? (
-              <img
-                src={`/api/image?url=${encodeURIComponent(settings.logoUrl)}`}
-                alt={settings.siteName}
-                className="size-11 rounded-2xl object-cover"
-              />
+              <div className="size-11 overflow-hidden rounded-2xl border border-white/10">
+                <CloudImage
+                  src={settings.logoUrl}
+                  alt={settings.siteName}
+                  loading="eager"
+                  className="h-full w-full object-cover"
+                  fallbackClassName="grid h-full place-items-center bg-violet-600 font-black"
+                />
+              </div>
             ) : (
               <div className="grid size-11 place-items-center rounded-2xl bg-violet-600 font-black">
                 {settings.siteName.slice(0, 1).toUpperCase()}
@@ -70,15 +77,13 @@ export default async function CoursePage({
         <div className="grid gap-8 lg:grid-cols-[1.05fr_.95fr] lg:items-start">
           <div className="overflow-hidden rounded-[2rem] border border-white/10 bg-white/[0.025]">
             <div className="relative aspect-[16/10] overflow-hidden bg-gradient-to-br from-[#19142d] to-[#0f5971]">
-              {ad.imageUrl ? (
-                <img
-                  src={`/api/image?url=${encodeURIComponent(ad.imageUrl)}`}
-                  alt={ad.courseName}
-                  className="h-full w-full object-cover"
-                />
-              ) : (
-                <div className="grid h-full place-items-center text-6xl font-black text-white/30">V</div>
-              )}
+              <CloudImage
+                src={ad.imageUrl}
+                alt={ad.courseName}
+                loading="eager"
+                className="h-full w-full object-cover"
+                fallbackClassName="grid h-full place-items-center bg-gradient-to-br from-[#19142d] to-[#0f5971] text-6xl font-black text-white/30"
+              />
               <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
               <div className="absolute right-4 top-4 flex flex-wrap gap-2">
                 <span className="rounded-full border border-white/15 bg-black/45 px-3 py-1.5 text-xs font-bold backdrop-blur-md">
@@ -157,7 +162,7 @@ export default async function CoursePage({
           </div>
         </div>
 
-        {settings.supportText && (
+        {settings.supportUrl && settings.supportText && (
           <div className="mt-8 rounded-[2rem] border border-white/10 bg-white/[0.02] p-6">
             <div className="flex items-start gap-3">
               <div className="grid size-11 shrink-0 place-items-center rounded-2xl bg-violet-500/10 text-violet-300">

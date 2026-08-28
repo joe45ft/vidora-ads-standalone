@@ -5,6 +5,7 @@ import { ensureAdvertisementsTable } from "@/lib/advertisements-table";
 import { isAdminAuthenticated } from "@/lib/auth";
 import { getDb } from "@/lib/db";
 import { normalizePublicImageUrl } from "@/lib/url";
+import { getSiteSettings } from "@/lib/site-settings";
 
 export const dynamic = "force-dynamic";
 
@@ -50,7 +51,17 @@ async function isAuthorizedImageSource(raw: string, normalized: string) {
     .where(or(eq(advertisements.imageUrl, raw.trim()), eq(advertisements.imageUrl, normalized)))
     .limit(1);
 
-  return matches.length > 0;
+  if (matches.length > 0) return true;
+
+  try {
+    const settings = await getSiteSettings();
+    const logoRaw = settings.logoUrl?.trim() ?? "";
+    if (!logoRaw) return false;
+    const logoNormalized = normalizePublicImageUrl(logoRaw);
+    return raw.trim() === logoRaw || normalized === logoNormalized;
+  } catch {
+    return false;
+  }
 }
 
 async function fetchImage(start: URL) {

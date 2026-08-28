@@ -91,7 +91,19 @@ function clean(value: unknown, max: number) {
   return String(value ?? "").trim().slice(0, max);
 }
 
-function optionalHttpsUrl(value: unknown) {
+function optionalLogoUrl(value: unknown) {
+  const raw = clean(value, 1000);
+  if (!raw) return null;
+  try {
+    const parsed = new URL(raw);
+    if (parsed.protocol !== "https:") throw new Error("unsupported_protocol");
+    return raw;
+  } catch {
+    throw new Error("INVALID_LOGO_URL");
+  }
+}
+
+function optionalSupportUrl(value: unknown) {
   const raw = clean(value, 1000);
   if (!raw) return null;
   try {
@@ -101,7 +113,7 @@ function optionalHttpsUrl(value: unknown) {
     }
     return raw;
   } catch {
-    throw new Error("INVALID_URL");
+    throw new Error("INVALID_SUPPORT_URL");
   }
 }
 
@@ -110,9 +122,9 @@ export async function updateSiteSettings(input: unknown) {
 
   const siteName = clean(body.siteName, 80) || DEFAULTS.siteName;
   const tagline = clean(body.tagline, 160) || DEFAULTS.tagline;
-  const logoUrl = optionalHttpsUrl(body.logoUrl);
+  const logoUrl = optionalLogoUrl(body.logoUrl);
   const supportLabel = clean(body.supportLabel, 60) || DEFAULTS.supportLabel;
-  const supportUrl = optionalHttpsUrl(body.supportUrl);
+  const supportUrl = optionalSupportUrl(body.supportUrl);
   const supportText = clean(body.supportText, 300) || DEFAULTS.supportText;
   const footerText = clean(body.footerText, 200) || DEFAULTS.footerText;
 

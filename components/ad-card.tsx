@@ -31,7 +31,25 @@ function priceText(price: number) {
   return price === 0 ? "مجاني" : price.toLocaleString();
 }
 
-function trackClick(id: string) {
+function trackInteraction(id: string) {
+  const viewKey = `vidora-ad-view:${id}`;
+  const clickKey = `vidora-ad-click:${id}`;
+
+  try {
+    if (!sessionStorage.getItem(viewKey)) {
+      sessionStorage.setItem(viewKey, "1");
+      void fetch(`/api/ads/${id}/view`, {
+        method: "POST",
+        keepalive: true
+      }).catch(() => undefined);
+    }
+
+    if (sessionStorage.getItem(clickKey)) return;
+    sessionStorage.setItem(clickKey, "1");
+  } catch {
+    // Continue when session storage is unavailable.
+  }
+
   void fetch(`/api/ads/${id}/click`, {
     method: "POST",
     keepalive: true
@@ -163,7 +181,7 @@ export function AdCard({ ad, featured = false }: { ad: AdCardData; featured?: bo
             href={ad.ctaUrl}
             target="_blank"
             rel="noopener noreferrer"
-            onClick={() => trackClick(ad.id)}
+            onClick={() => trackInteraction(ad.id)}
             className="inline-flex items-center gap-2 rounded-2xl bg-violet-600 px-5 py-3 text-sm font-black transition hover:bg-violet-500 active:scale-[.98]"
           >
             {ad.ctaText}

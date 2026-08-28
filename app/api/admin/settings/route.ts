@@ -23,9 +23,18 @@ export async function PUT(request: Request) {
     const settings = await updateSiteSettings(await request.json());
     return NextResponse.json({ settings });
   } catch (error) {
-    if (String(error).includes("INVALID_URL")) {
+    const message = String(error);
+
+    if (message.includes("INVALID_LOGO_URL")) {
       return NextResponse.json(
-        { error: "invalid_url", message: "تأكد من صحة روابط الشعار والدعم." },
+        { error: "invalid_logo_url", message: "رابط الشعار يجب أن يكون رابط HTTPS عام لصورة." },
+        { status: 400 }
+      );
+    }
+
+    if (message.includes("INVALID_SUPPORT_URL")) {
+      return NextResponse.json(
+        { error: "invalid_support_url", message: "تأكد من صحة رابط Contact / Support." },
         { status: 400 }
       );
     }

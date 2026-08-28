@@ -1,9 +1,9 @@
 import Link from "next/link";
 import {
   ArrowDown,
-  BookOpen,
   ChevronLeft,
   GraduationCap,
+  Headphones,
   LayoutGrid,
   ShieldCheck,
   Sparkles
@@ -12,12 +12,20 @@ import { listPublicAds } from "@/lib/ads";
 import { getSiteSettings } from "@/lib/site-settings";
 import { PublicOffers } from "@/components/public-offers";
 import { AdCard } from "@/components/ad-card";
+import { CloudImage } from "@/components/cloud-image";
+import { CategoryChips } from "@/components/category-chips";
 
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
   const [ads, settings] = await Promise.all([listPublicAds(), getSiteSettings()]);
-  const featured = ads.find((ad) => ad.featured) ?? ads[0] ?? null;
+  const markedFeatured = ads.filter((ad) => ad.featured);
+  const featuredAds = markedFeatured.length
+    ? markedFeatured.slice(0, 3)
+    : ads[0]
+      ? [ads[0]]
+      : [];
+  const featured = featuredAds[0] ?? null;
   const categories = Array.from(new Set(ads.map((ad) => ad.category))).slice(0, 8);
 
   return (
@@ -25,9 +33,21 @@ export default async function HomePage() {
       <header className="sticky top-0 z-50 border-b border-white/[0.07] bg-[#060a12]/80 backdrop-blur-xl">
         <div className="page-shell flex min-h-20 items-center justify-between gap-5">
           <Link href="/" className="flex items-center gap-3">
-            <div className="grid size-11 place-items-center rounded-2xl bg-gradient-to-br from-violet-600 to-indigo-500 font-black shadow-lg shadow-violet-950/30">
-              V
-            </div>
+            {settings.logoUrl ? (
+              <div className="size-11 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03]">
+                <CloudImage
+                  src={settings.logoUrl}
+                  alt={settings.siteName}
+                  loading="eager"
+                  className="h-full w-full object-cover"
+                  fallbackClassName="grid h-full place-items-center bg-gradient-to-br from-violet-600 to-indigo-500 font-black"
+                />
+              </div>
+            ) : (
+              <div className="grid size-11 place-items-center rounded-2xl bg-gradient-to-br from-violet-600 to-indigo-500 font-black shadow-lg shadow-violet-950/30">
+                {settings.siteName.slice(0, 1).toUpperCase()}
+              </div>
+            )}
             <div>
               <div className="font-black tracking-[.08em]">{settings.siteName}</div>
               <div className="text-[11px] text-slate-500">{settings.tagline}</div>
@@ -46,9 +66,11 @@ export default async function HomePage() {
               href={settings.supportUrl}
               target="_blank"
               rel="noreferrer"
-              className="hidden rounded-xl border border-violet-400/20 bg-violet-500/10 px-4 py-2.5 text-xs font-bold text-violet-300 transition hover:bg-violet-500/15 sm:inline-flex"
+              aria-label={settings.supportLabel}
+              className="inline-flex items-center gap-2 rounded-xl border border-violet-400/20 bg-violet-500/10 px-3 py-2.5 text-xs font-bold text-violet-300 transition hover:bg-violet-500/15 sm:px-4"
             >
-              {settings.supportLabel}
+              <Headphones size={16} />
+              <span className="hidden sm:inline">{settings.supportLabel}</span>
             </a>
           )}
 
@@ -99,7 +121,7 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {featured && (
+      {featuredAds.length > 0 && (
         <section id="featured" className="page-shell py-16 md:py-20">
           <div className="mb-7 flex items-end justify-between gap-4">
             <div>
@@ -111,7 +133,16 @@ export default async function HomePage() {
               <ChevronLeft size={17} />
             </a>
           </div>
-          <AdCard ad={featured} featured />
+
+          {featuredAds.length === 1 ? (
+            <AdCard ad={featuredAds[0]} featured />
+          ) : (
+            <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+              {featuredAds.map((ad) => (
+                <AdCard key={ad.id} ad={ad} />
+              ))}
+            </div>
+          )}
         </section>
       )}
 
@@ -122,22 +153,7 @@ export default async function HomePage() {
             <h2 className="mt-2 text-3xl font-black">تصفح حسب التصنيف</h2>
           </div>
 
-          {categories.length ? (
-            <div className="flex flex-wrap gap-3">
-              {categories.map((category) => (
-                <a
-                  key={category}
-                  href="#offers"
-                  className="inline-flex items-center gap-2 rounded-2xl border border-white/[0.08] bg-white/[0.03] px-4 py-3 text-sm font-bold text-slate-300 transition hover:border-violet-400/30 hover:bg-violet-500/10 hover:text-white"
-                >
-                  <BookOpen size={16} className="text-violet-400" />
-                  {category}
-                </a>
-              ))}
-            </div>
-          ) : (
-            <p className="text-sm text-slate-500">ستظهر التصنيفات هنا بعد نشر الإعلانات.</p>
-          )}
+<CategoryChips categories={categories} />
         </div>
       </section>
 
@@ -183,10 +199,36 @@ export default async function HomePage() {
         </div>
       </section>
 
+      {settings.supportUrl && (
+        <a
+          href={settings.supportUrl}
+          target="_blank"
+          rel="noreferrer"
+          aria-label={settings.supportLabel}
+          className="fixed bottom-5 right-5 z-40 inline-flex items-center gap-2 rounded-full border border-violet-300/20 bg-violet-600 px-4 py-3 text-sm font-black text-white shadow-2xl shadow-violet-950/50 transition hover:bg-violet-500"
+        >
+          <Headphones size={18} />
+          <span className="hidden sm:inline">{settings.supportLabel}</span>
+        </a>
+      )}
+
       <footer className="border-t border-white/[0.07] bg-black/15">
         <div className="page-shell flex flex-col gap-5 py-8 text-sm text-slate-500 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
-            <div className="grid size-9 place-items-center rounded-xl bg-violet-600 font-black text-white">V</div>
+            {settings.logoUrl ? (
+              <div className="size-9 overflow-hidden rounded-xl border border-white/10">
+                <CloudImage
+                  src={settings.logoUrl}
+                  alt={settings.siteName}
+                  className="h-full w-full object-cover"
+                  fallbackClassName="grid h-full place-items-center bg-violet-600 font-black text-white"
+                />
+              </div>
+            ) : (
+              <div className="grid size-9 place-items-center rounded-xl bg-violet-600 font-black text-white">
+                {settings.siteName.slice(0, 1).toUpperCase()}
+              </div>
+            )}
             <div>
               <div className="font-black text-slate-300">{settings.siteName}</div>
               <div className="text-xs">{settings.tagline}</div>

@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { BadgePercent, BookOpenCheck, Search, SlidersHorizontal } from "lucide-react";
 import { AdCard, type AdCardData } from "@/components/ad-card";
+import { CATEGORY_EVENT_NAME } from "@/components/category-chips";
 
 type TypeFilter = "all" | "course" | "offer";
 
@@ -10,6 +11,20 @@ export function PublicOffers({ ads }: { ads: AdCardData[] }) {
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("all");
   const [type, setType] = useState<TypeFilter>("all");
+
+  useEffect(() => {
+    function handleCategory(event: Event) {
+      const custom = event as CustomEvent<{ category?: string }>;
+      const next = custom.detail?.category;
+      if (!next) return;
+      setCategory(next);
+      setQuery("");
+    }
+
+    window.addEventListener(CATEGORY_EVENT_NAME, handleCategory);
+    return () => window.removeEventListener(CATEGORY_EVENT_NAME, handleCategory);
+  }, []);
+
 
   const categories = useMemo(
     () => ["all", ...Array.from(new Set(ads.map((ad) => ad.category))).sort()],
