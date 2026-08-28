@@ -127,3 +127,13 @@ npx opennextjs-cloudflare deploy
 - Advertisement type can be **Available Course** or **Discount Offer**.
 - No manual D1 migration is required; older databases receive `ad_type` automatically.
 - Cloud files must be public/readable without login.
+
+## v1.4.0 — Login & Recovery
+
+Admin authentication is now self-healing and includes a recovery flow.
+
+- Login: `/admin/login`
+- Password recovery: `/admin/recover`
+- Security/password change: `/admin/security`
+
+Save the recovery code shown at setup or after the first successful login on an older installation. It is required to reset the password without Cloudflare/D1 manual intervention.

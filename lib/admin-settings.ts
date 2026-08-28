@@ -262,21 +262,6 @@ async function attemptKey(value: string) {
 }
 
 
-async function ensureLoginAttemptsTable() {
-  await getEnv().DB.prepare(`
-    CREATE TABLE IF NOT EXISTS admin_login_attempts (
-      attempt_key TEXT PRIMARY KEY NOT NULL,
-      failed_count INTEGER NOT NULL DEFAULT 0,
-      locked_until INTEGER,
-      updated_at INTEGER NOT NULL
-    )
-  `).run();
-}
-
-async function attemptKey(value: string) {
-  return sha256(`vidora-login:${value || "unknown"}`);
-}
-
 export async function getAdminLoginState(clientId = "unknown"): Promise<AdminLoginState> {
   await ensureLoginAttemptsTable();
   const key = await attemptKey(clientId);
