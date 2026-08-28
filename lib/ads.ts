@@ -68,16 +68,22 @@ export async function incrementClick(id: string) {
 export async function getPublicAdBySlug(slug: string) {
   await ensureAdvertisementsTable();
 
-  const now = Date.now();
-  const row = await getEnv().DB.prepare(`
-    SELECT * FROM advertisements
-    WHERE slug = ?
-      AND published = 1
-      AND archived = 0
-      AND (starts_at IS NULL OR starts_at <= ?)
-      AND (ends_at IS NULL OR ends_at >= ?)
-    LIMIT 1
-  `).bind(slug, now, now).first();
+  const db = getDb();
+  const now = new Date();
 
-  return row ? mapAdRow(row as any) : null;
+  const rows = await db
+    .select()
+    .from(advertisements)
+    .where(
+      and(
+        eq(advertisements.slug, slug),
+        eq(advertisements.published, true),
+        eq(advertisements.archived, false),
+        or(isNull(advertisements.startsAt), lt(advertisements.startsAt, now)),
+        or(isNull(advertisements.endsAt), gt(advertisements.endsAt, now))
+      )
+    )
+    .limit(1);
+
+  return rows[0] ?? null;
 }

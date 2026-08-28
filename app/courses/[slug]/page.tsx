@@ -45,7 +45,7 @@ export default async function CoursePage({
           <Link href="/" className="flex items-center gap-3">
             {settings.logoUrl ? (
               <img
-                src={`/api/image-proxy?url=${encodeURIComponent(settings.logoUrl)}`}
+                src={`/api/image?url=${encodeURIComponent(settings.logoUrl)}`}
                 alt={settings.siteName}
                 className="size-11 rounded-2xl object-cover"
               />
@@ -72,7 +72,7 @@ export default async function CoursePage({
             <div className="relative aspect-[16/10] overflow-hidden bg-gradient-to-br from-[#19142d] to-[#0f5971]">
               {ad.imageUrl ? (
                 <img
-                  src={`/api/image-proxy?url=${encodeURIComponent(ad.imageUrl)}`}
+                  src={`/api/image?url=${encodeURIComponent(ad.imageUrl)}`}
                   alt={ad.courseName}
                   className="h-full w-full object-cover"
                 />
