@@ -9,13 +9,14 @@ import {
   Sparkles
 } from "lucide-react";
 import { listPublicAds } from "@/lib/ads";
+import { getSiteSettings } from "@/lib/site-settings";
 import { PublicOffers } from "@/components/public-offers";
 import { AdCard } from "@/components/ad-card";
 
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
-  const ads = await listPublicAds();
+  const [ads, settings] = await Promise.all([listPublicAds(), getSiteSettings()]);
   const featured = ads.find((ad) => ad.featured) ?? ads[0] ?? null;
   const categories = Array.from(new Set(ads.map((ad) => ad.category))).slice(0, 8);
 
@@ -28,8 +29,8 @@ export default async function HomePage() {
               V
             </div>
             <div>
-              <div className="font-black tracking-[.08em]">VIDORA ADS</div>
-              <div className="text-[11px] text-slate-500">Course Marketplace</div>
+              <div className="font-black tracking-[.08em]">{settings.siteName}</div>
+              <div className="text-[11px] text-slate-500">{settings.tagline}</div>
             </div>
           </Link>
 
@@ -39,6 +40,17 @@ export default async function HomePage() {
             <a href="#offers" className="transition hover:text-white">الكورسات والعروض</a>
             <a href="#categories" className="transition hover:text-white">التصنيفات</a>
           </nav>
+
+          {settings.supportUrl && (
+            <a
+              href={settings.supportUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="hidden rounded-xl border border-violet-400/20 bg-violet-500/10 px-4 py-2.5 text-xs font-bold text-violet-300 transition hover:bg-violet-500/15 sm:inline-flex"
+            >
+              {settings.supportLabel}
+            </a>
+          )}
 
           <Link
             href="/admin"
@@ -176,12 +188,12 @@ export default async function HomePage() {
           <div className="flex items-center gap-3">
             <div className="grid size-9 place-items-center rounded-xl bg-violet-600 font-black text-white">V</div>
             <div>
-              <div className="font-black text-slate-300">VIDORA ADS</div>
-              <div className="text-xs">Course Marketplace</div>
+              <div className="font-black text-slate-300">{settings.siteName}</div>
+              <div className="text-xs">{settings.tagline}</div>
             </div>
           </div>
 
-          <div>© 2026 Vidora Ads. All rights reserved.</div>
+          <div>{settings.footerText}</div>
         </div>
       </footer>
     </main>

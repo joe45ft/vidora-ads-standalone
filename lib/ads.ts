@@ -63,3 +63,21 @@ export async function incrementClick(id: string) {
     .set({ clicks: sql`${advertisements.clicks} + 1` })
     .where(publicAdCondition(id));
 }
+
+
+export async function getPublicAdBySlug(slug: string) {
+  await ensureAdvertisementsTable();
+
+  const now = Date.now();
+  const row = await getEnv().DB.prepare(`
+    SELECT * FROM advertisements
+    WHERE slug = ?
+      AND published = 1
+      AND archived = 0
+      AND (starts_at IS NULL OR starts_at <= ?)
+      AND (ends_at IS NULL OR ends_at >= ?)
+    LIMIT 1
+  `).bind(slug, now, now).first();
+
+  return row ? mapAdRow(row as any) : null;
+}

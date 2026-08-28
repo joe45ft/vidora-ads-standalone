@@ -19,6 +19,7 @@ import {
   Save,
   Search,
   ShieldCheck,
+  Settings2,
   Star,
   Trash2,
   X

@@ -1,11 +1,13 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef } from "react";
 import { ArrowUpLeft, BadgePercent, BookOpenCheck, Sparkles, Star } from "lucide-react";
 import { CloudImage } from "@/components/cloud-image";
 
 export type AdCardData = {
   id: string;
+  slug: string;
   title: string;
   courseName: string;
   category: string;
@@ -133,6 +135,15 @@ export function AdCard({ ad, featured = false }: { ad: AdCardData; featured?: bo
         ].join(" ")}>
           {ad.headline || ad.description || (isOffer ? "اكتشف تفاصيل العرض وسجّل مباشرة." : "اكتشف تفاصيل الكورس وسجّل مباشرة.")}
         </p>
+
+        <div className="mt-5">
+          <Link
+            href={`/courses/${ad.slug}`}
+            className="inline-flex items-center gap-2 text-sm font-black text-violet-300 transition hover:text-violet-200"
+          >
+            عرض تفاصيل الكورس
+          </Link>
+        </div>
 
         <div className="mt-6 flex items-end justify-between gap-4 border-t border-white/10 pt-5">
           <div>
