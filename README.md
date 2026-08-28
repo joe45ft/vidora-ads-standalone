@@ -104,3 +104,32 @@ git push
 - Build command: `npm run cf:build`
 - Deploy command: `npx wrangler deploy`
 - Root directory: `/` إذا كان المشروع في جذر الـrepository
+
+
+## v1.0.2 - Cloudflare D1 TypeScript build fix
+
+إذا ظهر أثناء `next build`:
+
+```text
+Cannot find name 'D1Database'
+```
+
+تم إصلاحه في v1.0.2 باستخدام الحزمة الرسمية:
+
+```text
+@cloudflare/workers-types
+```
+
+واستيراد:
+
+```ts
+import type { D1Database } from "@cloudflare/workers-types";
+```
+
+لذلك `npm run build` لا يحتاج إلى تشغيل `wrangler types` مسبقًا.
+
+يمكن استخدام الأمر التالي اختياريًا لفحص/توليد Bindings Types محليًا:
+
+```powershell
+npm run cf:types
+```

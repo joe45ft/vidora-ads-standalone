@@ -1,6 +1,6 @@
 {
   "name": "vidora-ads-standalone",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -13,7 +13,8 @@
     "cf:deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
     "db:generate": "drizzle-kit generate",
     "db:migrate:local": "wrangler d1 migrations apply vidora-ads-standalone-db --local",
-    "db:migrate:remote": "wrangler d1 migrations apply vidora-ads-standalone-db --remote"
+    "db:migrate:remote": "wrangler d1 migrations apply vidora-ads-standalone-db --remote",
+    "cf:types": "wrangler types"
   },
   "dependencies": {
     "@opennextjs/cloudflare": "^1.6.5",
@@ -34,6 +35,7 @@
     "eslint-config-next": "^16.0.0",
     "tailwindcss": "^4.1.12",
     "typescript": "^5.9.0",
-    "wrangler": "^4.33.0"
+    "wrangler": "^4.33.0",
+    "@cloudflare/workers-types": "^5.0.0"
   }
 }
